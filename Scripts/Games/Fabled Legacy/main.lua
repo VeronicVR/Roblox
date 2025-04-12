@@ -71,7 +71,7 @@ local Window = Luna:CreateWindow({
 
 	ConfigSettings = {
 		RootFolder = "Akora Hub/Games", -- The Root Folder Is Only If You Have A Hub With Multiple Game Scripts and u may remove it. DO NOT ADD A SLASH
-		ConfigFolder = GameName .. "/" .. Vars.Client.UserId -- The Name Of The Folder Where Luna Will Store Configs For This Script. DO NOT ADD A SLASH
+		ConfigFolder = GameName .. "/" .. Vars.Client.DisplayName .. " [ @" .. Vars.Client.Name .. " | " .. Vars.Client.UserId .. " ]" -- The Name Of The Folder Where Luna Will Store Configs For This Script. DO NOT ADD A SLASH
 	},
 
 	KeySystem = false, -- As Of Beta 6, Luna Has officially Implemented A Key System!
