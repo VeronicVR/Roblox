@@ -1,4 +1,5 @@
 repeat task.wait() until game:IsLoaded()
+repeat wait() until Game.Players.LocalPlayer and Game.Players.LocalPlayer.Character and Game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
 
 print([[     _    _                      _   _       _     ]])
 print([[    / \  | | _____  _ __ __ _   | | | |_   _| |__  ]])
