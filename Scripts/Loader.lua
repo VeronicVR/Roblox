@@ -10,6 +10,7 @@ if not getgenv().AkoraHubExecuted then
     getgenv().AkoraHubExecuted = true
 
     local HttpService = game:GetService("HttpService")
+    local MarketplaceService = game:GetService("MarketplaceService")
     local Url = "https://raw.githubusercontent.com/VeronicVR/Roblox/refs/heads/main/Scripts/Index.json"
 
     local Success, Response = pcall(function()
@@ -20,45 +21,38 @@ if not getgenv().AkoraHubExecuted then
         local Data = HttpService:JSONDecode(Response)
         local PlaceId = tostring(game.PlaceId)
         local ScriptUrl = nil
+        local CreatorName = nil
 
-        if Data.Games then
-            for _, gameEntry in pairs(Data.Games) do
-                if typeof(gameEntry) == "table" then
-                    for id, url in pairs(gameEntry) do
-                        if typeof(id) == "string" and not id:match("^_") then
-                            if id == PlaceId and url ~= "" then
-                                ScriptUrl = url
-                                break
-                            end
-                        end
-                    end
-                
-                    if not ScriptUrl and gameEntry["default"] and gameEntry["default"] ~= "" then
-                        ScriptUrl = gameEntry["default"]
-                        break
-                    end
-                
-                elseif typeof(gameEntry) == "string" and gameEntry ~= "" then
-                    ScriptUrl = gameEntry
-                    break
-                end
-            
-                if ScriptUrl then break end
+        local infoSuccess, placeInfo = pcall(function()
+            return MarketplaceService:GetProductInfo(game.PlaceId)
+        end)
+
+        if infoSuccess and placeInfo and placeInfo.Creator and placeInfo.Creator.Name then
+            CreatorName = placeInfo.Creator.Name
+        end
+
+        if Data.Games and CreatorName and Data.Games[CreatorName] then
+            local gameEntry = Data.Games[CreatorName]
+
+            if gameEntry[PlaceId] and gameEntry[PlaceId] ~= "" then
+                ScriptUrl = gameEntry[PlaceId]
+            elseif gameEntry["default"] and gameEntry["default"] ~= "" then
+                ScriptUrl = gameEntry["default"]
             end
         end
 
         if ScriptUrl and ScriptUrl ~= "" then
             print("Loading Script For Game ID:", PlaceId)
-        
+
             local ScriptSuccess, ScriptResponse = pcall(function()
                 return game:HttpGet(ScriptUrl .. "?t=" .. tostring(tick()))
             end)
-        
+
             if ScriptSuccess then
                 local LoadSuccess, ErrorMsg = pcall(function()
                     loadstring(ScriptResponse)()
                 end)
-            
+
                 if not LoadSuccess then
                     warn("Error Executing Script:", ErrorMsg)
                 end
@@ -66,7 +60,7 @@ if not getgenv().AkoraHubExecuted then
                 warn("Failed To Fetch Script From:", ScriptUrl)
             end
         else
-            warn("No Supported Script Found For This Game (PlaceId:", PlaceId, ")")
+            warn("No Supported Script Found For This Game (PlaceId:", PlaceId, ") or under creator:", CreatorName or "Unknown")
         end
     else
         warn("Failed To Fetch Game Script Index From:", Url)
