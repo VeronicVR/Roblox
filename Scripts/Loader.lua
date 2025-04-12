@@ -1,3 +1,5 @@
+repeat task.wait() until game:IsLoaded()
+
 print([[     _    _                      _   _       _     ]])
 print([[    / \  | | _____  _ __ __ _   | | | |_   _| |__  ]])
 print([[   / _ \ | |/ / _ \| '__/ _` |  | |_| | | | | '_ \ ]])
