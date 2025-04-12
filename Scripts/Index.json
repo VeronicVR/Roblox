@@ -1,7 +1,19 @@
 {
-    "games": {
+    "Games": {
         "Swordburst 2": {
-            "659222129": ""
+            "default": ""
+        },
+        "Fabled Legacy": {
+            "default": ""
+        },
+        "[B:S] ALS Team": {
+            "_World1": "Place ID for World 1",
+            "12886143095": "",
+
+            "_World2": "Place ID for World 2",
+            "18583778121": "",
+
+            "default": ""
         }
     }
 }
