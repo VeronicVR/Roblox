@@ -2907,12 +2907,12 @@ Library.ToggleKeybind = Options.MenuKeybind
 
 local ThemeManager = loadstring(game:HttpGet('https://raw.githubusercontent.com/Neuublue/Bluu/main/LinoriaLib/addons/ThemeManager.lua'))()
 ThemeManager:SetLibrary(Library)
-ThemeManager:SetFolder('Akora Hub/Games/Swordburst 2/' .. LocalPlayer.DisplayName .. " [ @" .. LocalPlayer.Name .. " | " .. LocalPlayer.UserId .. " ]" )
+ThemeManager:SetFolder('Akora Hub/Games/Swordburst 2/' .. LocalPlayer.DisplayName .. " [ @" .. LocalPlayer.Name .. " - " .. LocalPlayer.UserId .. " ]" )
 ThemeManager:ApplyToTab(Settings)
 
 local SaveManager = loadstring(game:HttpGet('https://raw.githubusercontent.com/Neuublue/Bluu/main/LinoriaLib/addons/SaveManager.lua'))()
 SaveManager:SetLibrary(Library)
-SaveManager:SetFolder('Akora Hub/Games/Swordburst 2/' .. LocalPlayer.DisplayName .. " [ @" .. LocalPlayer.Name .. " | " .. LocalPlayer.UserId .. " ]" )
+SaveManager:SetFolder('Akora Hub/Games/Swordburst 2/' .. LocalPlayer.DisplayName .. " [ @" .. LocalPlayer.Name .. " - " .. LocalPlayer.UserId .. " ]" )
 SaveManager:IgnoreThemeSettings()
 SaveManager:BuildConfigSection(Settings)
 SaveManager:LoadAutoloadConfig()
