@@ -2411,8 +2411,30 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 table.sort(farmUnits,    function(a, b) return a.InitCost    < b.InitCost    end)
                 table.sort(nonfarmUnits, function(a, b) return a.InitCost    < b.InitCost    end)
             
-                for _, unit in ipairs(farmUnits)    do table.insert(sortedUnitList, unit) end
-                for _, unit in ipairs(nonfarmUnits) do table.insert(sortedUnitList, unit) end
+                if Toggles.Autoplay_PlaceFocusFarm.Value then
+                    -- farm‑first priority
+                    for _, u in ipairs(farmUnits)    do table.insert(sortedUnitList, u) end
+                    for _, u in ipairs(nonfarmUnits) do table.insert(sortedUnitList, u) end
+                
+                    -- DEBUG:
+                    print(">>> Placement Order: FARM‑FIRST")
+                    for i, u in ipairs(sortedUnitList) do
+                        print(i, u.TrueName, "( Cost:", u.InitCost, ")")
+                    end
+                else
+                    -- pure cost‑based ordering across all
+                    local allUnits = {}
+                    for _, u in ipairs(farmUnits)    do table.insert(allUnits, u) end
+                    for _, u in ipairs(nonfarmUnits) do table.insert(allUnits, u) end
+                    table.sort(allUnits, function(a, b) return a.InitCost < b.InitCost end)
+                    sortedUnitList = allUnits
+                
+                    -- DEBUG:
+                    print(">>> Placement Order: COST‑ONLY")
+                    for i, u in ipairs(sortedUnitList) do
+                        print(i, u.TrueName, "( Cost:", u.InitCost, ")")
+                    end
+                end
             
                 local placedCounts = {}
                 for _, entry in ipairs(sortedUnitList) do
@@ -2476,9 +2498,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
                                     modelClone:Destroy()
 
-                                    
-
-                            
                                     local placeCFrame = CFrame.new(
                                         cube.Position.X,
                                         floorY + halfHeight,
@@ -2796,7 +2815,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                     local pct   = math.min(math.floor(worth / 75), 100)
                                     table.insert(unitLines, 
                                         string.format(
-                                            "[%d] %s\n\tWorthiness: %d%%",
+                                            "[%d] %s = %d%%",
                                             lvl, name, pct
                                         )
                                     )
@@ -2927,7 +2946,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                             fields      = {
                                                 {name="Client Stats",  value=statsField~="" and statsField or "No data", inline=true},
                                                 {name="Rewards",       value=table.concat(lines,"\n"), inline=true},
-                                                {name="Units",         value=unitsFieldValue, inline=false},
+                                                {name="Units (Worthiness)",         value=unitsFieldValue, inline=false},
                                                 {name="Match Results", value=mr, inline=false},
                                             },
                                             thumbnail   = {url=thumbUrl},
