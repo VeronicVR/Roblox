@@ -66,6 +66,17 @@ local Locals = {
         int = int:gsub("^,", "")
         return sign..int..frac
     end,
+    isPlacedAt = function(pos, name)
+        local tol = 1
+        for _, inst in ipairs(game.Workspace.Towers:GetChildren()) do
+            if inst.Name == name and inst.PrimaryPart then
+                if (inst.PrimaryPart.Position - pos).Magnitude < tol then
+                    return true
+                end
+            end
+        end
+        return false
+    end,
     -- Game Specific
 }
 local Directory = "Akora Hub/Games/" .. GameName .. "/" .. Locals.Client.DisplayName .. " [ @" .. Locals.Client.Name .. " - " .. Locals.Client.UserId .. " ]"
@@ -553,7 +564,7 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
             function NotPlacedCube()
                 local cube = nil
                 for i,v in next, globalPlacements do
-                    if v.Color ~= Color3.fromRGB(255,0,0) then
+                    if v.Color ~= Color3.fromRGB(255,0,0) and v.Color ~= Color3.fromRGB(255,255,0) then
                         return v
                     end
                 end
@@ -2374,6 +2385,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
             local Debounce = false
             function PlaceUnits()
+                wait(0.5)
                 if not getgenv().SmartAutoplay.Autoplace then
                     return
                 end
@@ -2464,8 +2476,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                 local cube = NotPlacedCube()
                                 if cube and Player_Cash >= entry.InitCost then
                                     local floorY = findFloorY(cube.Position, 100)
-                                
-
 
                                     local template   = game.ReplicatedStorage.Units[entry.UnitName]
                                     local modelClone = template:Clone()
@@ -2506,10 +2516,19 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                         cube.Position.Z
                                     )
                                 
-                                    Locals.ReplicatedStorage.Remotes.PlaceTower:FireServer(entry.UnitName, placeCFrame)
-                                    placedCounts[entry.UnitID] = placedCounts[entry.UnitID] + 1
-                                    wait(0.5)
-                                    cube.Color = Color3.fromRGB(255, 0, 0)
+                                    local placed = false
+                                    for attempt = 1, 2 do
+                                        Locals.ReplicatedStorage.Remotes.PlaceTower:FireServer(entry.UnitName, placeCFrame)
+                                        wait(0.5)
+                                        if Locals.isPlacedAt(placeCFrame.Position, entry.UnitName) then
+                                            placed = true
+                                            placedCounts[entry.UnitID] = placedCounts[entry.UnitID] + 1
+                                            cube.Color = Color3.fromRGB(255, 0, 0)  -- red on success
+                                            break
+                                        else
+                                            cube.Color = Color3.fromRGB(255, 255, 0) -- yellow on retry/fail
+                                        end
+                                    end
                                 else
                                     wait(0.2)
                                 end
@@ -2681,7 +2700,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
             
         --#endregion
-
+        
         Toggles.Autoplay_Enable:OnChanged(function()
             if Toggles.Autoplay_Enable.Value then  
                 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
@@ -2825,7 +2844,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             end
 
                             local unitsFieldValue = #unitLines > 0
-                                and table.concat(unitLines, "\n\n")
+                                and table.concat(unitLines, "\n")
                                 or "No equipped units"
                         --#endregion
 
