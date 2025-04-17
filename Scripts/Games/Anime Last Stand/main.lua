@@ -101,6 +101,7 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
 
 --#region Autoplay Logic
     if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+        getgenv().MapName, getgenv().MapMode, getgenv().MapDifficulty, getgenv().MapWave = workspace.Map.MapName.Value, game.ReplicatedStorage.Gamemode.Value, workspace.Map.MapDifficulty.Value, game.ReplicatedStorage.Wave.Value
         --#region Vareiables & Functions
             function resetAutoplayState()
                 print("🔄 Resetting Autoplay State...")
@@ -1732,7 +1733,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         end
     --#endregion
 
-    local SmartPlacement_TabBox = Tabs.AutoPlay:AddLeftTabbox()
+    local SmartPlacement_TabBox = Tabs.AutoPlay:AddRightTabbox()
     --#region Smart (Place on Wave) Settings Section
         local Smart_PlaceWave = SmartPlacement_TabBox:AddTab("Place on Wave")
         Smart_PlaceWave:AddToggle("Autoplay_PlaceFocusFarm", {
@@ -1870,7 +1871,242 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 Visible = true,
             })
         end
-    --#endregion    
+    --#endregion 
+    
+    local ManualLocationPlacement_Groupbox = Tabs.AutoPlay:AddLeftGroupbox("Manual Location Autoplay")
+    --#region Manual Location Section
+
+        -- Manual‑location persistence
+        local locationsFile   = Directory .. "/manual locations/" .. getgenv().MapName .. ".json"
+        local ManualLocations = {}
+            
+        -- if the file doesn't exist yet, create it as an empty JSON `{}` 
+        if not pcall(function() readfile(locationsFile) end) then
+            writefile(locationsFile, Locals.HttpService:JSONEncode({}))
+        end
+        
+        -- now safely load whatever’s in there
+        local raw  = readfile(locationsFile)
+        local data = Locals.HttpService:JSONDecode(raw) or {}
+        for k,v in pairs(data) do
+            ManualLocations[tonumber(k)] = Vector3.new(v.X, v.Y, v.Z)
+        end
+
+        -- six unique colors for each unit marker
+        local markerColors = {
+            Color3.fromRGB(255, 0, 0),    -- Red
+            Color3.fromRGB(255,165, 0),   -- Orange
+            Color3.fromRGB(255,255, 0),   -- Yellow
+            Color3.fromRGB(0,255, 0),     -- Green
+            Color3.fromRGB(0,  0,255),    -- Blue
+            Color3.fromRGB(128,  0,128),  -- Purple
+        }
+
+        local ManualMarkers = {}
+
+        for i = 1, 6 do
+            -- determine displayName or disable if none
+            local slotInfo   = PlayerData.Slots["Slot"..i]
+            local rawName    = slotInfo and slotInfo.Value or ""
+            local displayName = ""
+            if rawName ~= "" then
+                displayName = UnitNames[rawName] or rawName
+            end
+        
+            local label    = (displayName ~= "" and (displayName .. " Location Selector")) or "No Unit Present"
+            local disabled = (displayName == "")
+        
+            local btn = ManualLocationPlacement_Groupbox:AddButton(label, function()
+                if disabled then return end
+        
+                Library:Notify({
+                    Title       = "Info",
+                    Description = "Click to place marker for " .. displayName,
+                    Time        = 5,
+                })
+        
+                -- spawn your color‑coded marker
+                local marker = Instance.new("Part")
+                marker.Name         = "ManualLocMarker"
+                marker.Size         = Vector3.new(1,1,1)
+                marker.Anchored     = true
+                marker.CanCollide   = false
+                marker.Transparency = 0.5
+                marker.Material     = Enum.Material.Neon
+                marker.Color        = markerColors[i]
+                marker.Parent       = Locals.Workspace.Placements_Container
+        
+                -- raycast params ignoring the marker itself
+                local rayParams2 = RaycastParams.new()
+                rayParams2.FilterType = Enum.RaycastFilterType.Blacklist
+                rayParams2.FilterDescendantsInstances = { marker }
+        
+                -- follow cursor with raycast
+                local rsConn = Locals.RunService.RenderStepped:Connect(function()
+                    local unitRay = Locals.Mouse.UnitRay
+                    local hit = Locals.Workspace:Raycast(
+                        unitRay.Origin,
+                        unitRay.Direction * 10000,
+                        rayParams2
+                    )
+                    if hit then
+                        marker.Position = hit.Position
+                    end
+                end)
+        
+                -- on click, save & cleanup
+                local uiConn
+                uiConn = Locals.UserInputService.InputBegan:Connect(function(input, gp)
+                    if not gp and input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        -- save the location
+                        ManualLocations[i] = marker.Position
+        
+                        -- write file
+                        local out = {}
+                        for idx, pos in pairs(ManualLocations) do
+                            out[tostring(idx)] = { X = pos.X, Y = pos.Y, Z = pos.Z }
+                        end
+                        writefile(locationsFile, Locals.HttpService:JSONEncode(out))
+        
+                        -- if showing manual placements, update the visual
+                        if Toggles.Show_ManualPlacements.Value then
+                            -- remove old visuals for this slot
+                            if ManualMarkers[i] then
+                                if ManualMarkers[i].pillar then ManualMarkers[i].pillar:Destroy() end
+                                if ManualMarkers[i].gui    then ManualMarkers[i].gui:Destroy()    end
+                            end
+        
+                            local pillar = Instance.new("Part")
+                            pillar.Name       = "ManualPlacementPillar_"..i
+                            pillar.Size       = Vector3.new(0.5, 2.5, 0.5)
+                            pillar.Anchored   = true
+                            pillar.CanCollide = false
+                            pillar.Material   = Enum.Material.Neon
+                            pillar.Color      = markerColors[i] or Color3.new(1,1,1)
+                            pillar.Position   = marker.Position + Vector3.new(0,1,0)
+                            pillar.Parent     = Locals.Workspace
+        
+                            -- attach a BillboardGui with the unit name
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name          = "ManualPlacementLabel_"..i
+                            billboard.Adornee       = pillar
+                            billboard.Size          = UDim2.new(0, 100, 0, 50)
+                            billboard.StudsOffset   = Vector3.new(0, 3, 0)
+                            billboard.AlwaysOnTop   = true
+                            billboard.Parent        = pillar
+        
+                            local label = Instance.new("TextLabel")
+                            label.Size               = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text               = displayName
+                            label.TextSize           = 20
+                            label.TextColor3         = markerColors[i] or Color3.new(1,1,1)
+                            label.TextStrokeTransparency = 0
+                            label.Parent             = billboard
+        
+                            ManualMarkers[i] = { pillar = pillar, gui = billboard }
+                        end
+        
+                        Library:Notify({
+                            Title       = "Saved",
+                            Description = displayName .. " location saved.",
+                            Time        = 5,
+                            SoundId     = 18403881159,
+                        })
+        
+                        -- cleanup
+                        marker:Destroy()
+                        rsConn:Disconnect()
+                        uiConn:Disconnect()
+                    end
+                end)
+            end)
+        
+            btn:SetDisabled(disabled)
+        end
+        ManualLocationPlacement_Groupbox:AddToggle("ManualPlacements_Play", {
+            Text = "Auto Play - Manual Location",
+            Tooltip = "Will autoplay using the selected manual locations.",
+            DisabledTooltip = "WIP!",
+        
+            Default = false,
+            Disabled = true,
+            Visible = true,
+            Risky = false,
+        
+            Callback = function(Value)
+                --print("Akora Hub | MyToggle changed to:", Value)
+            end,
+        })
+        ManualLocationPlacement_Groupbox:AddDivider()
+        ManualLocationPlacement_Groupbox:AddToggle("Show_ManualPlacements", {
+            Text            = "Show Manual Placements",
+            Tooltip         = "Display saved manual unit locations",
+            DisabledTooltip = "No data yet!",
+        
+            Default = false,
+            Disabled = false,
+            Visible = true,
+            Risky = false,
+        
+            Callback = function(show)
+                if show then
+                    -- for each saved location...
+                    for i, pos in pairs(ManualLocations) do
+                        -- get the unit name for slot i
+                        local slotInfo   = PlayerData.Slots["Slot"..i]
+                        local rawName    = slotInfo and slotInfo.Value or ""
+                        local displayName = ""
+                        if rawName ~= "" then
+                            displayName = UnitNames[rawName] or rawName
+                        end
+        
+                        -- skip if no unit
+                        if displayName ~= "" then
+                            -- create a pillar at the saved pos
+                            local pillar = Instance.new("Part")
+                            pillar.Name       = "ManualPlacementPillar_"..i
+                            pillar.Size       = Vector3.new(0.5, 2.5, 0.5)
+                            pillar.Anchored   = true
+                            pillar.CanCollide = false
+                            pillar.Material   = Enum.Material.Neon
+                            pillar.Color      = markerColors[i] or Color3.new(1,1,1)
+                            pillar.Position   = pos + Vector3.new(0, 1, 0)
+                            pillar.Parent     = Locals.Workspace.Placements_Container
+        
+                            -- attach a BillboardGui with the unit name
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name          = "ManualPlacementLabel_"..i
+                            billboard.Adornee       = pillar
+                            billboard.Size          = UDim2.new(0, 100, 0, 50)
+                            billboard.StudsOffset   = Vector3.new(0, 3, 0)
+                            billboard.AlwaysOnTop   = true
+                            billboard.Parent        = pillar
+        
+                            local label = Instance.new("TextLabel")
+                            label.Size               = UDim2.new(1, 0, 1, 0)
+                            label.BackgroundTransparency = 1
+                            label.Text               = displayName
+                            label.TextSize           = 20
+                            label.TextColor3         = markerColors[i] or Color3.new(1,1,1)
+                            label.TextStrokeTransparency = 0
+                            label.Parent             = billboard
+        
+                            -- keep track so we can remove later
+                            ManualMarkers[i] = { pillar = pillar, gui = billboard }
+                        end
+                    end
+                else
+                    -- clear all the markers
+                    for _, data in pairs(ManualMarkers) do
+                        if data.pillar then data.pillar:Destroy() end
+                    end
+                    ManualMarkers = {}
+                end
+            end,
+        })
+        
+    --#endregion
 --#endregion
 
 --#region Macro Section
@@ -2330,7 +2566,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 end
             end)
         elseif Locals.PlaceId == 12900046592 then
-            getgenv().MapName, getgenv().MapMode, getgenv().MapDifficulty, getgenv().MapWave = workspace.Map.MapName.Value, game.ReplicatedStorage.Gamemode.Value, workspace.Map.MapDifficulty.Value, game.ReplicatedStorage.Wave.Value
             game.ReplicatedStorage.Wave:GetPropertyChangedSignal("Value"):Connect(function()
                 getgenv().MapWave = game:GetService("ReplicatedStorage").Wave.Value
             end)
