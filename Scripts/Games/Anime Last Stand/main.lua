@@ -3101,6 +3101,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 elseif child.Name == "EndGameUI" then
                     -- wait for any prompt to close
                     repeat wait() until not Locals.PlayerGui:FindFirstChild("Prompt")
+                    PlayerData = nil
+                    PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
 
                     task.spawn(function()
                         --#region Client Info
