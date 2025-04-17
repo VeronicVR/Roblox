@@ -3229,7 +3229,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             local res = "UNKNOWN"
 
                             for _, lbl in ipairs(stats and stats:GetDescendants() or {}) do
-                                if lbl:IsA("TextLabel") and (lbl.Text=="Win" or lbl.Text=="Defeat") then
+                                if lbl:IsA("TextLabel") and (lbl.Text=="Victory" or lbl.Text=="Defeat") then
                                     if lbl.Text=="Win" then
                                         res = "Victory"
                                         EmbedColor = 0x42F593
