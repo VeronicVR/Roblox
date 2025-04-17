@@ -6,7 +6,9 @@ getgenv().SmartAutoplay = {
     Autoplace = false,
     FinishedPlacing = false,
     EquippedUnits = {},
+    SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints"),
 }
+
 getgenv().MatchStartTime = os.time()
 local SummonDropsLog = {}
 getgenv().AutoUpgrade_Enabled = false
@@ -77,6 +79,10 @@ local Locals = {
         end
         return false
     end,
+    safeGet = function(childName)
+        local success,obj = pcall(function() return workspace[childName] end)
+        return success and obj
+    end,
     -- Game Specific
 }
 local Directory = "Akora Hub/Games/" .. GameName .. "/" .. Locals.Client.DisplayName .. " [ @" .. Locals.Client.Name .. " - " .. Locals.Client.UserId .. " ]"
@@ -133,118 +139,110 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
             local cubeContainer -- Will be set later
             globalPlacements = {}
         
-            local function getNodePosition(index)
-                local mapFolder = Workspace:FindFirstChild("Map")
+            -- Returns the world‐space position of the Nth node (Start → selected waypoints → Finish)
+            function getNodePosition(index, heightOffset)
+                heightOffset = heightOffset or 0
+                local mapFolder = workspace:FindFirstChild("Map")
                 if not mapFolder then
                     warn("Map folder not found!")
-                return nil
-            end
-        
-            local nodes = {}
-        
-            -- Always start with the Start block if it exists.
-            local startBlock = mapFolder:FindFirstChild("Start")
-            if startBlock then
-                table.insert(nodes, startBlock)
-            else
-                warn("Start block not found!")
-            end
-        
-            -- Get the Waypoints folder and sort its children.
-            local waypointsFolder = mapFolder:FindFirstChild("Waypoints")
-            if waypointsFolder then
-                local wpNodes = waypointsFolder:GetChildren()
+                    return nil
+                end
+            
+                -- figure out which Waypoints folder we’re using
+                local wpFold = getgenv().SmartAutoplay.SelectedPathFolder
+                               or mapFolder:FindFirstChild("Waypoints")
+                if not wpFold then
+                    warn("Waypoints folder not found!")
+                    return nil
+                end
+            
+                local nodes = {}
+            
+                -- only include the Start block if we’re on the MAIN path
+                if wpFold.Name == "Waypoints" then
+                    local startBlock = mapFolder:FindFirstChild("Start")
+                    if startBlock then
+                        table.insert(nodes, startBlock)
+                    else
+                        warn("Start block not found!")
+                    end
+                end
+            
+                -- add all waypoints from the chosen folder, sorted numerically
+                local wpNodes = wpFold:GetChildren()
                 table.sort(wpNodes, function(a, b)
-                    return (tonumber(a.Name) or 0) < (tonumber(b.Name) or 0)
+                    return (tonumber(a.Name:match("(%d+)")) or 0) < (tonumber(b.Name:match("(%d+)")) or 0)
                 end)
                 for _, node in ipairs(wpNodes) do
                     table.insert(nodes, node)
                 end
-            else
-                warn("Waypoints folder not found!")
-            end
-        
-            -- Always add the Finish block if it exists.
-            local finishBlock = mapFolder:FindFirstChild("Finish")
-            if finishBlock then
-                table.insert(nodes, finishBlock)
-            else
-                warn("Finish block not found!")
-            end
-        
-            if index >= 1 and index <= #nodes then
+            
+                -- always include the Finish block last
+                local finishBlock = mapFolder:FindFirstChild("Finish")
+                if finishBlock then
+                    table.insert(nodes, finishBlock)
+                else
+                    warn("Finish block not found!")
+                end
+            
+                -- pick the requested node
+                if index < 1 or index > #nodes then
+                    warn("Invalid node index:", index)
+                    return nil
+                end
+            
                 return nodes[index].Position + Vector3.new(0, heightOffset, 0)
-            else
-                warn("Invalid node index:", index)
             end
-            return nil
+
+            if workspace:FindFirstChild("Placements_Container") then
+                workspace.Placements_Container:Destroy()
             end
-            getgenv().circlePosition = getNodePosition(nodeIndex)
-            if not getgenv().circlePosition then return end
-        
-            if Workspace:FindFirstChild("Placements_Container") then
-                Workspace.Placements_Container:Destroy()
-            end
-        
+            
             local PlacementContainer = Instance.new("Folder")
-            PlacementContainer.Name = "Placements_Container"
-            PlacementContainer.Parent = Workspace
-        
             local cylinder = Instance.new("Part")
-            cylinder.Name = "PlacementVisualizer"
-            cylinder.Size = Vector3.new(0.1, radius * 2, radius * 2)
-            cylinder.Position = getgenv().circlePosition
-            if getgenv().debugvisible then 
-                cylinder.Transparency = 0.8
-            else
-                cylinder.Transparency = 1
-            end
-            cylinder.Color = Color3.fromRGB(70, 0, 0)
-            cylinder.Material = Enum.Material.SmoothPlastic
-            cylinder.Anchored = true
-            cylinder.CanCollide = false
-            cylinder.Shape = Enum.PartType.Cylinder
-            cylinder.Orientation = Vector3.new(0, 0, 90)
-            cylinder.Parent = PlacementContainer
-        
             local cubeContainer = Instance.new("Folder")
-            cubeContainer.Name = "Placements"
-            cubeContainer.Parent = cylinder
-        
-            -- Generates cubes and parents them into cubeContainer.
+
             function generateCubes()
-                cubes = {}  -- Reset the cubes table
+                if not cylinder or not cubeContainer then
+                    warn("generateCubes: missing cylinder or cubeContainer")
+                    return
+                end
+            
+                -- Use the actual cylinder position as the base
+                local basePos = cylinder.Position
+                getgenv().circlePosition = basePos
+            
+                cubes = {}  -- reset
+            
                 for x = -radius, radius, spacing do
                     for z = -radius, radius, spacing do
-                        local distance = math.sqrt(x^2 + z^2)
+                        local distance = math.sqrt(x*x + z*z)
                         if distance <= radius then
-                            local cubeOffset = Vector3.new(x, cubeSize.Y/2, z)
-                            local cubePosition = getgenv().circlePosition + cubeOffset + Vector3.new(0, heightOffset, 0)
+                            local cubeOffset   = Vector3.new(x, cubeSize.Y/2, z)
+                            local cubePosition = basePos + cubeOffset + Vector3.new(0, heightOffset, 0)
+            
                             local cube = Instance.new("Part")
-                            cube.Size = cubeSize
-                            cube.Position = cubePosition
-                            cube.Anchored = false  -- Unanchored so the Weld works
-                            cube.CanCollide = false
-                            cube.Color = Color3.fromRGB(255, 255, 255)
-                            if getgenv().debugvisible then 
-                                cube.Transparency = 0.25
-                            else
-                                cube.Transparency = 1
-                            end   
-
-                            cube.Material = Enum.Material.Neon
-                            cube.Parent = cubeContainer  -- Parent into our cube container
+                            cube.Size        = cubeSize
+                            cube.Position    = cubePosition
+                            cube.Anchored    = false
+                            cube.CanCollide  = false
+                            cube.Color       = Color3.fromRGB(255, 255, 255)
+                            cube.Transparency= getgenv().debugvisible and 0.25 or 1
+                            cube.Material    = Enum.Material.Neon
+                            cube.Parent      = cubeContainer
+            
                             table.insert(cubes, { cube = cube, distance = distance, offset = cubeOffset })
-                        
-                            -- Weld the cube to the cylinder (PlacementVisualizer)
+            
+                            -- weld directly to our cylinder instance
                             local weld = Instance.new("WeldConstraint")
-                            weld.Part0 = Workspace.Placements_Container:FindFirstChild("PlacementVisualizer")
+                            weld.Part0 = cylinder
                             weld.Part1 = cube
                             weld.Parent = cube
                         end
                     end
                 end
             
+                -- sort by distance so naming/order is consistent
                 table.sort(cubes, function(a, b)
                     return a.distance < b.distance
                 end)
@@ -252,17 +250,93 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
                     data.cube.Name = "Placement_" .. i
                 end
             
-                -- Update globalPlacements similar to updatePlacementVisualizer:
+                -- rebuild globalPlacements
                 globalPlacements = {}
-                if cubeContainer then
-                    for _, part in ipairs(cubeContainer:GetChildren()) do
-                        local num = tonumber(part.Name:match("Placement_(%d+)"))
-                        if num then
-                            table.insert(globalPlacements, part)
-                        end
+                for _, part in ipairs(cubeContainer:GetChildren()) do
+                    local num = tonumber(part.Name:match("^Placement_(%d+)"))
+                    if num then
+                        table.insert(globalPlacements, part)
                     end
                 end
             end
+
+            -- blacklisted instances for raycasting
+            local rp = RaycastParams.new()
+            rp.FilterType = Enum.RaycastFilterType.Blacklist
+            rp.FilterDescendantsInstances = {
+                game.Players.LocalPlayer.Character,
+                workspace:FindFirstChild("Towers"),
+                workspace:FindFirstChild("Placements_Container"),
+                workspace:FindFirstChild("Enemies"),
+            }
+        
+            -- find nearest surface Y under or above `pos`
+            local function findSurfaceY(pos, maxDist)
+                maxDist = maxDist or (radius*2)
+                local down = workspace:Raycast(
+                    pos + Vector3.new(0, maxDist/2, 0),
+                    Vector3.new(0, -maxDist, 0),
+                    rp
+                )
+                if down then return down.Position.Y end
+            
+                local up = workspace:Raycast(
+                    pos - Vector3.new(0, maxDist/2, 0),
+                    Vector3.new(0, maxDist, 0),
+                    rp
+                )
+                if up then return up.Position.Y end
+            
+                return pos.Y
+            end
+            
+            -- Call this once to create the cylinder + cubes at node #1 (or any nodeIndex)
+            function InitializePlacementVisualizer(nodeIndex)
+                -- compute the base world position of that node
+                local basePos = getNodePosition(nodeIndex)
+                if not basePos then return end
+            
+                -- clean out any previous visualizer
+                if workspace:FindFirstChild("Placements_Container") then
+                    workspace.Placements_Container:Destroy()
+                end
+            
+                -- make the new container
+                PlacementContainer = Instance.new("Folder")
+                PlacementContainer.Name   = "Placements_Container"
+                PlacementContainer.Parent = workspace
+            
+                -- make the cylinder
+                cylinder = Instance.new("Part")
+                cylinder.Name        = "PlacementVisualizer"
+                cylinder.Size        = Vector3.new(0.1, radius*2, radius*2)
+                cylinder.Material    = Enum.Material.SmoothPlastic
+                cylinder.Anchored    = true
+                cylinder.CanCollide  = false
+                cylinder.Shape       = Enum.PartType.Cylinder
+                cylinder.Orientation = Vector3.new(0, 0, 90)
+                cylinder.Color       = Color3.fromRGB(70, 0, 0)
+                cylinder.Transparency= getgenv().debugvisible and 0.8 or 1
+                cylinder.Parent      = PlacementContainer
+            
+                
+            
+                -- position the cylinder flush to that surface
+                local surfaceY  = findSurfaceY(basePos)
+                local halfHeight= (radius*2) / 2
+                cylinder.Position = Vector3.new(basePos.X, surfaceY + halfHeight, basePos.Z)
+            
+                -- create the cube container and generate the cubes
+                cubeContainer = Instance.new("Folder")
+                cubeContainer.Name   = "Placements"
+                cubeContainer.Parent = cylinder
+            
+                generateCubes()
+            end
+
+            -- example usage at startup or after dropdown change:
+            InitializePlacementVisualizer(1)
+
             -- Moves the cylinder to a new node position and regenerates cubes.
             function moveCylinderTo(newNodeIndex)
                 local newPosition = getNodePosition(newNodeIndex)
@@ -283,119 +357,75 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
                     warn("Node " .. newNodeIndex .. " position not found!")
                 end
             end
+
+            moveCylinderTo(1)
             -- Generate the initial set of cubes.
             generateCubes()
-            -- Helper function: Updates the placement visualizer position based on a percentage along the track.
-            function updatePlacementVisualizer(percent)
-                local mapFolder = Workspace:FindFirstChild("Map")
+
+            function updatePlacementVisualizer(percent, heightOffset)
+                heightOffset = heightOffset or 0
+                local mapFolder = workspace:FindFirstChild("Map")
                 if not mapFolder then return end
-        
-                -- Gather nodes in the order: Start, then children of "Waypoints" (sorted numerically), then Finish.
+            
+                -- build node list exactly as getNodePosition does
+                local wpFold = getgenv().SmartAutoplay.SelectedPathFolder
+                               or mapFolder:FindFirstChild("Waypoints")
                 local nodes = {}
-        
-                local startBlock = mapFolder:FindFirstChild("Start")
-                if startBlock then
-                    table.insert(nodes, startBlock)
-                else
-                    warn("Start block not found!")
+                if wpFold.Name == "Waypoints" then
+                    local s = mapFolder:FindFirstChild("Start")
+                    if s then table.insert(nodes, s) end
                 end
+                local list = wpFold:GetChildren()
+                table.sort(list, function(a, b)
+                    return (tonumber(a.Name) or 0) < (tonumber(b.Name) or 0)
+                end)
+                for _, n in ipairs(list) do table.insert(nodes, n) end
+                local f = mapFolder:FindFirstChild("Finish")
+                if f then table.insert(nodes, f) end
+                if #nodes < 2 then return end
             
-                local waypointsFolder = mapFolder:FindFirstChild("Waypoints")
-                if waypointsFolder then
-                    local wpNodes = waypointsFolder:GetChildren()
-                    table.sort(wpNodes, function(a, b)
-                        return (tonumber(a.Name) or 0) < (tonumber(b.Name) or 0)
-                    end)
-                    for _, node in ipairs(wpNodes) do
-                        table.insert(nodes, node)
-                    end
-                else
-                    warn("Waypoints folder not found!")
-                end
+                -- compute the new position along the track
+                local pos = {}
+                for i,n in ipairs(nodes) do pos[i] = n.Position end
+                local total = 0
+                for i=2,#pos do total += (pos[i]-pos[i-1]).Magnitude end
+                local target = (percent/100)*total
             
-                local finishBlock = mapFolder:FindFirstChild("Finish")
-                if finishBlock then
-                    table.insert(nodes, finishBlock)
-                else
-                    warn("Finish block not found!")
-                end
-            
-                if #nodes == 0 then return end
-            
-                -- Build an array of positions (ignoring vertical differences for length calculations)
-                local positions = {}
-                for i, node in ipairs(nodes) do
-                    positions[i] = node.Position
-                end
-            
-                local totalLength = 0
-                for i = 2, #positions do
-                    totalLength = totalLength + (positions[i] - positions[i-1]).Magnitude
-                end
-            
-                local targetDistance = (percent / 100) * totalLength
-            
-                local cumulative = 0
-                local newPos = positions[1]
-                for i = 1, #positions - 1 do
-                    local segment = (positions[i+1] - positions[i]).Magnitude
-                    if cumulative + segment >= targetDistance then
-                        local t = (targetDistance - cumulative) / segment
-                        newPos = positions[i]:Lerp(positions[i+1], t)
+                local cum = 0
+                local newPos = pos[1]
+                for i=1,#pos-1 do
+                    local seg = (pos[i+1]-pos[i]).Magnitude
+                    if cum+seg >= target then
+                        local t = (target-cum)/seg
+                        newPos = pos[i]:Lerp(pos[i+1], t)
                         break
                     else
-                        cumulative = cumulative + segment
+                        cum += seg
                     end
                 end
+                newPos += Vector3.new(0, heightOffset, 0)
             
-                -- Apply vertical offset
-                newPos = newPos + Vector3.new(0, heightOffset, 0)
-            
-                -- Tween the cylinder's (PlacementVisualizer's) position to newPos.
-                local cylinder = Workspace.Placements_Container and Workspace.Placements_Container:FindFirstChild("PlacementVisualizer")
-                if cylinder then
-                    local TweenService = game:GetService("TweenService")
-                    local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-                    local tween = TweenService:Create(cylinder, tweenInfo, {Position = newPos})
-                    tween:Play()
-                    tween.Completed:Wait()  -- Wait until the tween completes.
+                -- move cylinder
+                local vis = workspace.Placements_Container
+                            and workspace.Placements_Container:FindFirstChild("PlacementVisualizer")
+                if vis then
+                    local ts = game:GetService("TweenService")
+                    local tw = ts:Create(vis, TweenInfo.new(0.2), {Position=newPos})
+                    tw:Play()
+                    tw.Completed:Wait()
+                    getgenv().circlePosition = newPos
                 end
             
-                -- Update the global circlePosition variable.
-                getgenv().circlePosition = newPos
-            
-                -- Reacquire (or create) the cube container inside the visualizer.
-                local visualizer = Workspace.Placements_Container and Workspace.Placements_Container:FindFirstChild("PlacementVisualizer")
-                if visualizer then
-                    cubeContainer = visualizer:FindFirstChild("Placements")
-                    if not cubeContainer then
-                        cubeContainer = Instance.new("Model")
-                        cubeContainer.Name = "Placements"
-                        cubeContainer.Parent = visualizer
-                    end
-                end
-            
-                -- Clear existing cubes.
+                -- clear old cubes
+                local cubeContainer = vis and vis:FindFirstChild("Placements")
                 if cubeContainer then
-                    for _, cube in ipairs(cubeContainer:GetChildren()) do
-                        cube:Destroy()
+                    for _, c in ipairs(cubeContainer:GetChildren()) do
+                        if c.Name:match("^Placement_%d+") then c:Destroy() end
                     end
                 end
-                cubes = {}  -- Reset the cubes table
             
-                -- Generate new cubes.
+                -- regenerate
                 generateCubes()
-            
-                -- Update the global placements list.
-                globalPlacements = {}
-                if cubeContainer then
-                    for _, part in ipairs(cubeContainer:GetChildren()) do
-                        local num = tonumber(part.Name:match("Placement_(%d+)"))
-                        if num then
-                            table.insert(globalPlacements, part)
-                        end
-                    end
-                end
             end
         
             local EquippedUnits = getgenv().SmartAutoplay.EquippedUnits
@@ -1571,7 +1601,57 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
 --#region Auto Play Section
     --#region Smart Autoplay Section
+        local map = workspace:WaitForChild("Map")
+        local waypointList = {}
+        
+        for _, obj in ipairs(map:GetChildren()) do
+            if obj:IsA("Folder") then
+                if obj.Name == "Waypoints" then
+                    table.insert(waypointList, { folder = obj, num = 1 })
+                else
+                    local digits = obj.Name:match("^Waypoints(%d+)$")
+                    if digits then
+                        table.insert(waypointList, { folder = obj, num = tonumber(digits) })
+                    end
+                end
+            end
+        end
+        
+        table.sort(waypointList, function(a, b)
+            return a.num < b.num
+        end)
+        
+        local pathNames = {}
+        for _, entry in ipairs(waypointList) do
+            if entry.num == 1 then
+                table.insert(pathNames, "Main Path")
+            else
+                table.insert(pathNames, "Path " .. entry.num)
+            end
+        end
+        
         local SmartAutoplay_GroupBox = Tabs.AutoPlay:AddLeftGroupbox("Smart Auto Play")
+        SmartAutoplay_GroupBox:AddDropdown("Autoplay_Path", {
+            Values      = pathNames,
+            Default     = 1,
+            Multi       = false,
+            Text        = "Select Path to place on",
+            DisabledTooltip = "I am disabled!",
+            Searchable  = true,
+            Callback    = function(selectedName)
+                for i, name in ipairs(pathNames) do
+                    if name == selectedName then
+                        local chosenFolder = waypointList[i].folder
+                        print("Chose path folder:", chosenFolder.Name)
+                        getgenv().SmartAutoplay.SelectedPathFolder = chosenFolder
+                        updatePlacementVisualizer(Options.Autoplay_Distance.Value)
+                        break
+                    end
+                end
+            end,
+            Disabled    = false,
+            Visible     = true,
+        })
         SmartAutoplay_GroupBox:AddSlider("Autoplay_Distance", {
         	Text = "Placement Distance",
         	Default = 30,
@@ -2339,16 +2419,11 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 return nil
             end
             
-            local function safeGet(childName)
-                local success,obj = pcall(function() return workspace[childName] end)
-                return success and obj
-            end
-            
             local filterList = {
                 game.Players.LocalPlayer.Character,
-                safeGet("Towers"),
-                safeGet("Placements_Container"),
-                safeGet("Enemies"),
+                Locals.safeGet("Towers"),
+                Locals.safeGet("Placements_Container"),
+                Locals.safeGet("Enemies"),
             }
             
             for i = #filterList,1,-1 do
