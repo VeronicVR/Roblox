@@ -6,7 +6,6 @@ getgenv().SmartAutoplay = {
     Autoplace = false,
     FinishedPlacing = false,
     EquippedUnits = {},
-    SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints"),
 }
 
 getgenv().MatchStartTime = os.time()
@@ -101,6 +100,7 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
 
 --#region Autoplay Logic
     if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+        getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
         getgenv().MapName, getgenv().MapMode, getgenv().MapDifficulty, getgenv().MapWave = workspace.Map.MapName.Value, game.ReplicatedStorage.Gamemode.Value, workspace.Map.MapDifficulty.Value, game.ReplicatedStorage.Wave.Value
         --#region Vareiables & Functions
             function resetAutoplayState()
