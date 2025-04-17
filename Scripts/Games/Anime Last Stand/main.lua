@@ -764,6 +764,21 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         :AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
 
     Library.ToggleKeybind = Options.MenuKeybind
+
+    local Credits = Tabs["UI Settings"]:AddRightGroupbox("Credits")
+    Credits:AddLabel("Scripter & Creator: Ako")
+    Credits:AddButton("Scripter & Creator: Ako", function()
+        --setclipboard("")
+    end)
+    Credits:AddButton("UI Lib: Deividcomsono", function()
+        setclipboard("https://github.com/deividcomsono/Obsidian")
+        Library:Notify({
+            Title       = "Success",
+            Description = "URL Copied to clipboard!",
+            Time        = 5,
+            SoundId     = 18403881159,
+        })
+    end)
 --#endregion
 --#region Theme & Save
     ThemeManager:SetLibrary( Library )
@@ -3329,7 +3344,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 end
             end)
         end
-        
         MonitorEndGame()
     --#endregion
 --#endregion
