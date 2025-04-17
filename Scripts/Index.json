@@ -7,13 +7,10 @@
             "default": "https://raw.githubusercontent.com/VeronicVR/Roblox/refs/heads/main/Scripts/Games/Fabled%20Legacy/main.lua"
         },
         "[B:S] ALS Team": {
-            "_World1": "Place ID for World 1",
-            "12886143095": "",
-
-            "_World2": "Place ID for World 2",
-            "18583778121": "",
-
-            "default": ""
+            "default": "https://raw.githubusercontent.com/VeronicVR/Roblox/refs/heads/main/Scripts/Games/Anime%20Last%20Stand/main.lua"
+        },
+        "AnimeReborn": {
+            "default": "https://raw.githubusercontent.com/VeronicVR/Roblox/refs/heads/main/Scripts/Games/Anime%20Reborn/main.lua"
         }
     }
 }
