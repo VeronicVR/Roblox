@@ -3101,8 +3101,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 elseif child.Name == "EndGameUI" then
                     -- wait for any prompt to close
                     repeat wait() until not Locals.PlayerGui:FindFirstChild("Prompt")
-                    PlayerData = nil
-                    PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
+                    NewPlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
 
                     task.spawn(function()
                         --#region Client Info
@@ -3111,9 +3110,9 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             local thumbRes = Locals.HttpRequest({Url = ("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%s&size=420x420&format=Png&isCircular=false"):format(uid), Method="GET"})
                             local thumbUrl = (pcall(function() return Locals.HttpService:JSONDecode(thumbRes.Body).data[1].imageUrl end) and thumbRes and thumbRes.Body) and Locals.HttpService:JSONDecode(thumbRes.Body).data[1].imageUrl or ""
 
-                            local level        = PlayerData.Level or 0
-                            local currentXP    = PlayerData.EXP or 0
-                            local xpForNext    = PlayerData.MaxEXP or 0
+                            local level        = NewPlayerData.Level or 0
+                            local currentXP    = NewPlayerData.EXP or 0
+                            local xpForNext    = NewPlayerData.MaxEXP or 0
 
                             local descText = string.format(
                                 "**User**: ||[%s(@%s)](%s)||\n" ..
@@ -3141,7 +3140,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
                             local statsLines = {}
                             for key, emoji in pairs(statEmotes) do
-                                local val = PlayerData[key]
+                                local val = NewPlayerData[key]
                                 if val ~= nil then
                                     local formatted = Locals.formatCommas(val)
                                     table.insert(statsLines, ("%s %s"):format(emoji, formatted))
@@ -3152,7 +3151,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
                         --#region Unit Info
                             local unitLines = {}
-                            for _, u in pairs(PlayerData.UnitData) do
+                            for _, u in pairs(NewPlayerData.UnitData) do
                                 if u.Equipped then
                                     local lvl   = u.Level or 0
                                     local name  = u.UnitName or "Unknown"
