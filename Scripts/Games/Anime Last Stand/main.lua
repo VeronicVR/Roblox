@@ -2778,7 +2778,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             for key, emoji in pairs(statEmotes) do
                                 local val = PlayerData[key]
                                 if val ~= nil then
-                                    local formatted = formatCommas(val)
+                                    local formatted = Locals.formatCommas(val)
                                     table.insert(statsLines, ("%s %s"):format(emoji, formatted))
                                 end
                             end
