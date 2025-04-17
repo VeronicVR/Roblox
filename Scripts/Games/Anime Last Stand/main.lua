@@ -1,5 +1,5 @@
 local wait, spawn = task.wait, task.spawn
-repeat wait(2) until game:IsLoaded()
+repeat wait() until game:IsLoaded()
              
 getgenv().debugvisible = false
 getgenv().SmartAutoplay = {
@@ -88,8 +88,10 @@ local Locals = {
 local Directory = "Akora Hub/Games/" .. GameName .. "/" .. Locals.Client.DisplayName .. " [ @" .. Locals.Client.Name .. " - " .. Locals.Client.UserId .. " ]"
 
 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+    getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
+
     local pg = game.Players.LocalPlayer.PlayerGui
-    repeat wait(2) until pg:FindFirstChild("Bottom")
+    repeat task.wait() until pg:FindFirstChild("Bottom")
                       and pg.Bottom:FindFirstChild("Frame")
                       and pg.Bottom.Frame.Visible
 end
@@ -1198,8 +1200,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         resortChallenges()
 
         if not Locals.IsAllowedPlace(12886143095, 18583778121) then
-            getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
-
             local rem = Locals.ReplicatedStorage.Remotes:FindFirstChild("PortalSelection")
             if rem then
                 rem.OnClientEvent:Connect(function(portals)
@@ -1604,12 +1604,12 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
 --#region Auto Play Section
     --#region Smart Autoplay Section
+
         local waypointList = {}
         local pathNames = {}
 
         if not Locals.IsAllowedPlace(12886143095, 18583778121) then
             local map = workspace:WaitForChild("Map")
-            
             for _, obj in ipairs(map:GetChildren()) do
                 if obj:IsA("Folder") then
                     if obj.Name == "Waypoints" then
@@ -1626,6 +1626,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             table.sort(waypointList, function(a, b)
                 return a.num < b.num
             end)
+
 
             for _, entry in ipairs(waypointList) do
                 if entry.num == 1 then
@@ -1882,14 +1883,14 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
     --#region Manual Location Section
 
         -- Manual‑location persistence
-        local MapNameManual
-        if getgenv().MapName == nil then 
-            MapNameManual = "Lobby"
+        local ManualMapName
+        if getgenv().MapName == nil then
+            ManualMapName = "Lobby"
         else
-            MapNameManual = getgenv().MapName
+            ManualMapName = getgenv().MapName
         end
 
-        local locationsFile   = Directory .. "/manual locations/" .. MapNameManual .. ".json"
+        local locationsFile   = Directory .. "/manual locations/" .. ManualMapName .. ".json"
         local ManualLocations = {}
             
         -- if the file doesn't exist yet, create it as an empty JSON `{}` 
@@ -2039,10 +2040,10 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         ManualLocationPlacement_Groupbox:AddToggle("ManualPlacements_Play", {
             Text = "Auto Play - Manual Location",
             Tooltip = "Will autoplay using the selected manual locations.",
-            DisabledTooltip = "WIP!",
+            DisabledTooltip = "I am disabled!",
         
             Default = false,
-            Disabled = true,
+            Disabled = false,
             Visible = true,
             Risky = false,
         
