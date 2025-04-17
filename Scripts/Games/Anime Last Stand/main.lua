@@ -1,5 +1,5 @@
 local wait, spawn = task.wait, task.spawn
-repeat wait() until game:IsLoaded()
+repeat wait(2) until game:IsLoaded()
              
 getgenv().debugvisible = false
 getgenv().SmartAutoplay = {
@@ -89,7 +89,7 @@ local Directory = "Akora Hub/Games/" .. GameName .. "/" .. Locals.Client.Display
 
 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
     local pg = game.Players.LocalPlayer.PlayerGui
-    repeat task.wait() until pg:FindFirstChild("Bottom")
+    repeat wait(2) until pg:FindFirstChild("Bottom")
                       and pg.Bottom:FindFirstChild("Frame")
                       and pg.Bottom.Frame.Visible
 end
