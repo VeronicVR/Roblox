@@ -6,6 +6,7 @@ getgenv().SmartAutoplay = {
     Autoplace = false,
     FinishedPlacing = false,
     EquippedUnits = {},
+    SelectedPathFolder = game.workspace,
 }
 
 getgenv().MatchStartTime = os.time()
@@ -100,7 +101,6 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
 
 --#region Autoplay Logic
     if not Locals.IsAllowedPlace(12886143095, 18583778121) then
-        getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
         getgenv().MapName, getgenv().MapMode, getgenv().MapDifficulty, getgenv().MapWave = workspace.Map.MapName.Value, game.ReplicatedStorage.Gamemode.Value, workspace.Map.MapDifficulty.Value, game.ReplicatedStorage.Wave.Value
         --#region Vareiables & Functions
             function resetAutoplayState()
@@ -1198,6 +1198,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         resortChallenges()
 
         if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+            getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
+
             local rem = Locals.ReplicatedStorage.Remotes:FindFirstChild("PortalSelection")
             if rem then
                 rem.OnClientEvent:Connect(function(portals)
@@ -1602,32 +1604,35 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
 --#region Auto Play Section
     --#region Smart Autoplay Section
-        local map = workspace:WaitForChild("Map")
         local waypointList = {}
-        
-        for _, obj in ipairs(map:GetChildren()) do
-            if obj:IsA("Folder") then
-                if obj.Name == "Waypoints" then
-                    table.insert(waypointList, { folder = obj, num = 1 })
-                else
-                    local digits = obj.Name:match("^Waypoints(%d+)$")
-                    if digits then
-                        table.insert(waypointList, { folder = obj, num = tonumber(digits) })
+        local pathNames = {}
+
+        if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+            local map = workspace:WaitForChild("Map")
+            
+            for _, obj in ipairs(map:GetChildren()) do
+                if obj:IsA("Folder") then
+                    if obj.Name == "Waypoints" then
+                        table.insert(waypointList, { folder = obj, num = 1 })
+                    else
+                        local digits = obj.Name:match("^Waypoints(%d+)$")
+                        if digits then
+                            table.insert(waypointList, { folder = obj, num = tonumber(digits) })
+                        end
                     end
                 end
             end
-        end
-        
-        table.sort(waypointList, function(a, b)
-            return a.num < b.num
-        end)
-        
-        local pathNames = {}
-        for _, entry in ipairs(waypointList) do
-            if entry.num == 1 then
-                table.insert(pathNames, "Main Path")
-            else
-                table.insert(pathNames, "Path " .. entry.num)
+
+            table.sort(waypointList, function(a, b)
+                return a.num < b.num
+            end)
+
+            for _, entry in ipairs(waypointList) do
+                if entry.num == 1 then
+                    table.insert(pathNames, "Main Path")
+                else
+                    table.insert(pathNames, "Path " .. entry.num)
+                end
             end
         end
         
@@ -1877,7 +1882,14 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
     --#region Manual Location Section
 
         -- Manual‑location persistence
-        local locationsFile   = Directory .. "/manual locations/" .. getgenv().MapName .. ".json"
+        local MapNameManual
+        if getgenv().MapName == nil then 
+            MapNameManual = "Lobby"
+        else
+            MapNameManual = getgenv().MapName
+        end
+
+        local locationsFile   = Directory .. "/manual locations/" .. MapNameManual .. ".json"
         local ManualLocations = {}
             
         -- if the file doesn't exist yet, create it as an empty JSON `{}` 
