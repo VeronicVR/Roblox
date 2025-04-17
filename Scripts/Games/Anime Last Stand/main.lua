@@ -2416,11 +2416,12 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     for _, u in ipairs(farmUnits)    do table.insert(sortedUnitList, u) end
                     for _, u in ipairs(nonfarmUnits) do table.insert(sortedUnitList, u) end
                 
-                    -- DEBUG:
+                    --[[-- DEBUG:
                     print(">>> Placement Order: FARM‑FIRST")
                     for i, u in ipairs(sortedUnitList) do
                         print(i, u.TrueName, "( Cost:", u.InitCost, ")")
                     end
+                    --]]
                 else
                     -- pure cost‑based ordering across all
                     local allUnits = {}
@@ -2429,11 +2430,12 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     table.sort(allUnits, function(a, b) return a.InitCost < b.InitCost end)
                     sortedUnitList = allUnits
                 
-                    -- DEBUG:
+                    --[[-- DEBUG:
                     print(">>> Placement Order: COST‑ONLY")
                     for i, u in ipairs(sortedUnitList) do
                         print(i, u.TrueName, "( Cost:", u.InitCost, ")")
                     end
+                    --]]
                 end
             
                 local placedCounts = {}
