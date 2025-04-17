@@ -50,7 +50,7 @@ if not getgenv().AkoraHubExecuted then
         end
 
         if ScriptUrl and ScriptUrl ~= "" then
-            print("Loading Script For Game ID:", PlaceId)
+            --print("Loading Script For Game ID:", PlaceId)
 
             local ScriptSuccess, ScriptResponse = pcall(function()
                 return game:HttpGet(ScriptUrl .. "?t=" .. tostring(tick()))
