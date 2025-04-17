@@ -10,12 +10,12 @@ print([[                                                   ]])
 print("Welcome, " .. game.Players.LocalPlayer.DisplayName .. " [ @" .. game.Players.LocalPlayer.Name .. " ]")
 
 local queue_on_teleport = (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or queue_on_teleport
-if queue_on_teleport then
-    queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/VeronicVR/Roblox/refs/heads/main/Scripts/Loader.lua'))()")
-end
-
 if not getgenv().AkoraHubExecuted then
     getgenv().AkoraHubExecuted = true
+
+    if queue_on_teleport then
+        queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/VeronicVR/Roblox/refs/heads/main/Scripts/Loader.lua'))()")
+    end
 
     local HttpService = game:GetService("HttpService")
     local MarketplaceService = game:GetService("MarketplaceService")
@@ -50,8 +50,6 @@ if not getgenv().AkoraHubExecuted then
         end
 
         if ScriptUrl and ScriptUrl ~= "" then
-            --print("Loading Script For Game ID:", PlaceId)
-
             local ScriptSuccess, ScriptResponse = pcall(function()
                 return game:HttpGet(ScriptUrl .. "?t=" .. tostring(tick()))
             end)
