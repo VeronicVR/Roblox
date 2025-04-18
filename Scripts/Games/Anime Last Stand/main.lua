@@ -2894,9 +2894,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 getgenv().MapWave = game:GetService("ReplicatedStorage").Wave.Value
 
                 if Toggles.Sell_Enabled.Value and Options.Sell_WaveReq.Value ~= "" and Options.Sell_WaveReq.Value ~= nil then
-                    print(tonumber(Options.Sell_WaveReq.Value))
-
-                    print(tonumber(getgenv().MapWave))
                     if getgenv().MapWave and tonumber(getgenv().MapWave) >= tonumber(Options.Sell_WaveReq.Value) then
                         for _, tg in ipairs(toDisable) do
                             tg:SetValue(false)
