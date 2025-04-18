@@ -2185,7 +2185,13 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 -- raycast params ignoring the marker itself
                 local rayParams2 = RaycastParams.new()
                 rayParams2.FilterType = Enum.RaycastFilterType.Blacklist
-                rayParams2.FilterDescendantsInstances = { marker }
+                rayParams2.FilterDescendantsInstances = {
+                    marker,
+                    game.Players.LocalPlayer.Character,
+                    workspace:FindFirstChild("Towers"),
+                    workspace:FindFirstChild("Placements_Container"),
+                    workspace:FindFirstChild("Enemies"),
+                }
         
                 -- follow cursor with raycast
                 local rsConn = Locals.RunService.RenderStepped:Connect(function()
