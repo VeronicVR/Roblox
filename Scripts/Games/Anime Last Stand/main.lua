@@ -779,6 +779,80 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             SoundId     = 18403881159,
         })
     end)
+
+    if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+        local TweenService     = Locals.TweenService
+        local VirtualInput     = Locals.VirtualInputManager
+        local bottomFrame      = Locals.PlayerGui:WaitForChild("Bottom"):WaitForChild("Frame")
+
+        for _, subframe in ipairs(bottomFrame:GetChildren()) do
+            if not subframe:IsA("Frame") then continue end
+
+            for _, btn in ipairs(subframe:GetChildren()) do
+                if not btn:IsA("TextButton") then continue end
+
+                -- clone + rename
+                local hubBtn = btn:Clone()
+                hubBtn.Name   = "Hub"
+                hubBtn.Parent = subframe
+
+                hubBtn.TextLabel.Text = "Akora"
+
+                -- swap icon + size
+                local img = hubBtn:FindFirstChildWhichIsA("ImageLabel")
+                if img then
+                    img.Image = "rbxassetid://116790885950088"
+                    img.Size  = UDim2.new(0,40,0,40)
+                end
+
+                -- shift it right by 85px
+                local p = hubBtn.Position
+                hubBtn.Position = UDim2.new(
+                    p.X.Scale, p.X.Offset + 85,
+                    p.Y.Scale, p.Y.Offset
+                )
+
+                -- hook up the UIScale animations
+                local inner = hubBtn:FindFirstChild("Frame")
+                              and hubBtn.Frame:FindFirstChild("Frame")
+                local uiScale = inner and inner:FindFirstChildOfClass("UIScale")
+                if uiScale then
+                    local DEFAULT = 1.003
+                    local HOVER   = 1.097
+                    local PRESS   = 0.956
+                    uiScale.Scale = DEFAULT
+
+                    local ti = TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
+                    local hovering = false
+
+                    local function go(toScale)
+                        TweenService:Create(uiScale, ti, { Scale = toScale }):Play()
+                    end
+
+                    hubBtn.MouseEnter:Connect(function()
+                        hovering = true
+                        go(HOVER)
+                    end)
+                    hubBtn.MouseLeave:Connect(function()
+                        hovering = false
+                        go(DEFAULT)
+                    end)
+                    hubBtn.MouseButton1Down:Connect(function()
+                        go(PRESS)
+                    end)
+                    hubBtn.MouseButton1Up:Connect(function()
+                        go(hovering and HOVER or DEFAULT)
+                    end)
+                end
+
+                -- when clicked, simulate RightShift
+                hubBtn.MouseButton1Click:Connect(function()
+                    VirtualInput:SendKeyEvent(true,  Enum.KeyCode[Library.ToggleKeybind.Value], false, game)
+                    VirtualInput:SendKeyEvent(false, Enum.KeyCode[Library.ToggleKeybind.Value], false, game)
+                end)
+            end
+        end
+    end
 --#endregion
 --#region Theme & Save
     ThemeManager:SetLibrary( Library )
