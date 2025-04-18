@@ -1289,7 +1289,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             Multi           = true,
         
             Text            = "Select Challenges",
-            Tooltip         = "Which challenges to prioritize",
+            Tooltip         = "Select which challenges to prioritize for both claiming and auto using.",
         
             Searchable      = true,
         
@@ -1306,7 +1306,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
         Portal_GroupBox:AddToggle("AutoClaimPortal", {
             Text            = "Auto Claim Portal",
-            Tooltip         = "Automatically pick the best portal",
+            Tooltip         = "Automatically pick the best portal for claim and use",
         
             Default = false,
             Disabled = false,
@@ -1328,7 +1328,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     if type(portals) ~= "table" then return end
         
                     -- DEBUG: show selected challenges in priority order
-                    print("Debug ▶ Selected challenges (priority):")
+                    --print("Debug ▶ Selected challenges (priority):")
                     for idx, ch in ipairs(sortedSelectedChallenges) do
                         print(string.format("  #%d: %s", idx, ch))
                     end
@@ -1336,22 +1336,22 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     -- DEBUG: list incoming portals
                     for i, p in ipairs(portals) do
                         local d = p.PortalData or {}
-                        print(string.format(
-                            "Portal[%d] → Map:%s | Challenge:%s | Tier:%s | Name:%s",
-                            i,
-                            d.Map or "?",
-                            d.Challenges or "?",
-                            d.Tier or "?",
-                            p.PortalName or "?"
-                        ))
+                        --print(string.format(
+                        --    "Portal[%d] → Map:%s | Challenge:%s | Tier:%s | Name:%s",
+                        --    i,
+                        --    d.Map or "?",
+                        --    d.Challenges or "?",
+                        --    d.Tier or "?",
+                        --    p.PortalName or "?"
+                        --))
                     end
         
                     if Toggles.AutoClaimPortal.Value then
-                        print("Debug ▶ Auto‑claim is ON")
+                        --print("Debug ▶ Auto‑claim is ON")
         
                         -- 1) Grab raw selectedChallenges table
                         local raw = Options.SelectedChallenges.Value
-                        print("Debug ▶ RAW Options.SelectedChallenges.Value type:", type(raw))
+                        --print("Debug ▶ RAW Options.SelectedChallenges.Value type:", type(raw))
         
                         -- 2) Build sortedSelectedChallenges from keys with true values
                         sortedSelectedChallenges = {}
@@ -1359,50 +1359,50 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             for challengeName, isSelected in pairs(raw) do
                                 if isSelected then
                                     table.insert(sortedSelectedChallenges, challengeName)
-                                    print("Debug ▶ Loaded challenge:", challengeName)
+                                    --print("Debug ▶ Loaded challenge:", challengeName)
                                 end
                             end
                         else
-                            warn("Debug ▶ SelectedChallenges.Value isn’t a table!", tostring(raw))
+                            --warn("Debug ▶ SelectedChallenges.Value isn’t a table!", tostring(raw))
                         end
-                        print("Debug ▶ #sortedSelectedChallenges =", #sortedSelectedChallenges)
+                        --print("Debug ▶ #sortedSelectedChallenges =", #sortedSelectedChallenges)
         
                         -- 3) Find best portal
-                        print("Debug ▶ Total portals available:", #portals)
+                        --print("Debug ▶ Total portals available:", #portals)
                         local best, bestPrio, bestIndex
                         for i = 1, math.min(3, #portals) do
                             local p = portals[i]
                             local pd = p.PortalData or {}
-                            print(string.format(
-                                "Debug ▶ Portal[%d] → Map:%s | Challenge:%s",
-                                i,
-                                tostring(pd.Map),
-                                tostring(pd.Challenges)
-                            ))
+                            --print(string.format(
+                            --    "Debug ▶ Portal[%d] → Map:%s | Challenge:%s",
+                            --    i,
+                            --    tostring(pd.Map),
+                            --    tostring(pd.Challenges)
+                            --))
         
                             local ch = pd.Challenges
                             if ch then
                                 for prio, sel in ipairs(sortedSelectedChallenges) do
-                                    print(string.format("  Comparing '%s' to '%s' (priority %d)", ch, sel, prio))
+                                    --print(string.format("  Comparing '%s' to '%s' (priority %d)", ch, sel, prio))
                                     if ch == sel then
-                                        print("    → Match!")
+                                        --print("    → Match!")
                                         if not bestPrio or prio > bestPrio then
                                             best, bestPrio, bestIndex = p, prio, i
-                                            print(string.format("      New best: portal #%d (priority %d)", i, prio))
+                                            --print(string.format("      New best: portal #%d (priority %d)", i, prio))
                                         end
                                         break
                                     end
                                 end
                             else
-                                print("  No challenge field on this portal")
+                                --print("  No challenge field on this portal")
                             end
                         end
 
                         if best then
-                            print(string.format(
-                                "Debug ▶ Claiming portal #%d with '%s' (priority %d)",
-                                bestIndex, best.PortalData.Challenges, bestPrio
-                            ))
+                            --print(string.format(
+                            --    "Debug ▶ Claiming portal #%d with '%s' (priority %d)",
+                            --    bestIndex, best.PortalData.Challenges, bestPrio
+                            --))
                             wait(2)
                             local ok, err = pcall(function()
                                 rem:FireServer(bestIndex)
@@ -1452,16 +1452,24 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                 end
                             end)
                             if ok then
-                                print("Debug ▶ FireServer succeeded")
+                                --print("Debug ▶ FireServer succeeded")
+                                Library:Notify({
+                                    Title       = "Success",
+                                    Description = "✅ Claimed portal: " .. best.PortalData.Challenges,
+                                    Time        = 5,
+                                    SoundId     = 18403881159,
+                                })
                             else
-                                warn("Debug ▶ FireServer failed:", err)
+                                print("Debug ▶ Portal claim failed")
+                                Library:Notify({
+                                    Title       = "Error",
+                                    Description = "❌ Portal claim failed",
+                                    Time        = 5,
+                                    SoundId     = 8400918001,
+                                })
+                                --warn("Debug ▶ FireServer failed:", err)
                             end
-                            Library:Notify({
-                                Title       = "Success",
-                                Description = "✅ Claimed portal: " .. best.PortalData.Challenges,
-                                Time        = 5,
-                                SoundId     = 18403881159,
-                            })
+                            
                         else
                             print("Debug ▶ No matching portal found.")
                             Library:Notify({
@@ -1472,7 +1480,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             })
                         end
                     else
-                        print("Debug ▶ Auto‑claim is OFF")
+                        --print("Debug ▶ Auto‑claim is OFF")
                     end
                 end)
             end
@@ -3441,9 +3449,9 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             local res = "UNKNOWN"
 
                             for _, lbl in ipairs(stats and stats:GetDescendants() or {}) do
-                                if lbl:IsA("TextLabel") then warn(lbl.Text) end
-                                if lbl:IsA("TextLabel") and (lbl.Text=="Victory" or lbl.Text=="Defeat") then
-                                    if lbl.Text=="Win" then
+                                --if lbl:IsA("TextLabel") then warn(lbl.Text) end
+                                if lbl:IsA("TextLabel") and (lbl.Text=="Win" or lbl.Text=="Defeat" or lbl.Text=="Portal Cleared!") then
+                                    if lbl.Text=="Win" or lbl.Text=="Portal Cleared!" then
                                         res = "Victory"
                                         EmbedColor = 0x42F593
                                     elseif lbl.Text=="Defeat" then
@@ -3529,6 +3537,16 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             if Toggles.AutoRetry.Value and Buttons:FindFirstChild("Retry") then
                                 Locals.ActivatePromptButton(Buttons.Retry)
                             elseif Toggles.AutoNext.Value and Buttons:FindFirstChild("Next") then
+                                if Toggles.AutoClaimPortal.Value and getgenv().MapMode == "Portal" then
+                                    print("FUCKKKK")
+
+                                    --local args = {
+                                    --    "098e41db-3b9e-423a-bb8c-31d30e6180a0"
+                                    --}
+                                    --game:GetService("ReplicatedStorage").Remotes.Portals.Activate:InvokeServer(unpack(args))
+                                else
+                                    Locals.ActivatePromptButton(Buttons.Next)
+                                end
                                 Locals.ActivatePromptButton(Buttons.Next)
                             elseif Toggles.AutoLeave.Value and Buttons:FindFirstChild("Leave") then
                                 Locals.ActivatePromptButton(Buttons.Leave)
@@ -3537,7 +3555,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         end
 
                         task.wait(0.1)
-                        Locals.GuiService.SelectedObject = nil
+                        --Locals.GuiService.SelectedObject = nil
                     end)
 
                     ResetPlaced()
