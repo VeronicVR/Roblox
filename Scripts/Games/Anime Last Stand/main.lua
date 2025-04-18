@@ -1277,10 +1277,11 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         })
     --#endregion
 
+    local Portal_GroupBox = Tabs.Main:AddRightGroupbox("Portal")
     --#region Auto Portal
         local sortedSelectedChallenges = {}
 
-        local function resortChallenges()
+        function resortChallenges()
             sortedSelectedChallenges = {}
             for _, ch in ipairs(Options.SelectedChallenges.Value) do
                 table.insert(sortedSelectedChallenges, _)
@@ -1298,8 +1299,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end)
         end
 
-        -- create your groupbox on the Portal tab
-        local Portal_GroupBox = Tabs.Main:AddRightGroupbox("Portal")
         Portal_GroupBox:AddLabel("Auto Claim Portal")
         Portal_GroupBox:AddDropdown("SelectedChallenges", {
             Values          = {"Barebones","Tower Limit","Flight","No Hit","Speedy","High Cost","Short Range","Immunity"},
@@ -1321,7 +1320,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             Disabled = false,
             Visible  = true,
         })
-
         Portal_GroupBox:AddToggle("AutoClaimPortal", {
             Text            = "Auto Claim Portal",
             Tooltip         = "Automatically pick the best portal for claim and use",
@@ -1408,174 +1406,237 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 --print("Auto‑claim set to", val)
             end,
         })
-        -- initialize our list
-        resortChallenges()
 
-        if not Locals.IsAllowedPlace(12886143095, 18583778121) then
-            local rem = Locals.ReplicatedStorage.Remotes:FindFirstChild("PortalSelection")
-            if rem then
-                rem.OnClientEvent:Connect(function(portals)
-                    if type(portals) ~= "table" then return end
-        
-                    -- DEBUG: show selected challenges in priority order
-                    --print("Debug ▶ Selected challenges (priority):")
-                    for idx, ch in ipairs(sortedSelectedChallenges) do
-                        print(string.format("  #%d: %s", idx, ch))
-                    end
-        
-                    -- DEBUG: list incoming portals
-                    for i, p in ipairs(portals) do
-                        local d = p.PortalData or {}
-                        --print(string.format(
-                        --    "Portal[%d] → Map:%s | Challenge:%s | Tier:%s | Name:%s",
-                        --    i,
-                        --    d.Map or "?",
-                        --    d.Challenges or "?",
-                        --    d.Tier or "?",
-                        --    p.PortalName or "?"
-                        --))
-                    end
-        
-                    if Toggles.AutoClaimPortal.Value then
-                        --print("Debug ▶ Auto‑claim is ON")
-        
-                        -- 1) Grab raw selectedChallenges table
-                        local raw = Options.SelectedChallenges.Value
-                        --print("Debug ▶ RAW Options.SelectedChallenges.Value type:", type(raw))
-        
-                        -- 2) Build sortedSelectedChallenges from keys with true values
-                        sortedSelectedChallenges = {}
-                        if type(raw) == "table" then
-                            for challengeName, isSelected in pairs(raw) do
-                                if isSelected then
-                                    table.insert(sortedSelectedChallenges, challengeName)
-                                    --print("Debug ▶ Loaded challenge:", challengeName)
-                                end
-                            end
-                        else
-                            --warn("Debug ▶ SelectedChallenges.Value isn’t a table!", tostring(raw))
+        --#region initialize our list
+            resortChallenges()
+
+            if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+                local rem = Locals.ReplicatedStorage.Remotes:FindFirstChild("PortalSelection")
+                if rem then
+                    rem.OnClientEvent:Connect(function(portals)
+                        if type(portals) ~= "table" then return end
+                    
+                        -- DEBUG: show selected challenges in priority order
+                        --print("Debug ▶ Selected challenges (priority):")
+                        for idx, ch in ipairs(sortedSelectedChallenges) do
+                            print(string.format("  #%d: %s", idx, ch))
                         end
-                        --print("Debug ▶ #sortedSelectedChallenges =", #sortedSelectedChallenges)
-        
-                        -- 3) Find best portal
-                        --print("Debug ▶ Total portals available:", #portals)
-                        local best, bestPrio, bestIndex
-                        for i = 1, math.min(3, #portals) do
-                            local p = portals[i]
-                            local pd = p.PortalData or {}
+                    
+                        -- DEBUG: list incoming portals
+                        for i, p in ipairs(portals) do
+                            local d = p.PortalData or {}
                             --print(string.format(
-                            --    "Debug ▶ Portal[%d] → Map:%s | Challenge:%s",
+                            --    "Portal[%d] → Map:%s | Challenge:%s | Tier:%s | Name:%s",
                             --    i,
-                            --    tostring(pd.Map),
-                            --    tostring(pd.Challenges)
+                            --    d.Map or "?",
+                            --    d.Challenges or "?",
+                            --    d.Tier or "?",
+                            --    p.PortalName or "?"
                             --))
-        
-                            local ch = pd.Challenges
-                            if ch then
-                                for prio, sel in ipairs(sortedSelectedChallenges) do
-                                    --print(string.format("  Comparing '%s' to '%s' (priority %d)", ch, sel, prio))
-                                    if ch == sel then
-                                        --print("    → Match!")
-                                        if not bestPrio or prio > bestPrio then
-                                            best, bestPrio, bestIndex = p, prio, i
-                                            --print(string.format("      New best: portal #%d (priority %d)", i, prio))
-                                        end
-                                        break
+                        end
+                    
+                        if Toggles.AutoClaimPortal.Value then
+                            --print("Debug ▶ Auto‑claim is ON")
+                        
+                            -- 1) Grab raw selectedChallenges table
+                            local raw = Options.SelectedChallenges.Value
+                            --print("Debug ▶ RAW Options.SelectedChallenges.Value type:", type(raw))
+                        
+                            -- 2) Build sortedSelectedChallenges from keys with true values
+                            sortedSelectedChallenges = {}
+                            if type(raw) == "table" then
+                                for challengeName, isSelected in pairs(raw) do
+                                    if isSelected then
+                                        table.insert(sortedSelectedChallenges, challengeName)
+                                        --print("Debug ▶ Loaded challenge:", challengeName)
                                     end
                                 end
                             else
-                                --print("  No challenge field on this portal")
+                                --warn("Debug ▶ SelectedChallenges.Value isn’t a table!", tostring(raw))
                             end
-                        end
-
-                        if best then
-                            --print(string.format(
-                            --    "Debug ▶ Claiming portal #%d with '%s' (priority %d)",
-                            --    bestIndex, best.PortalData.Challenges, bestPrio
-                            --))
-                            wait(2)
-                            local ok, err = pcall(function()
-                                rem:FireServer(bestIndex)
-
-                                local Players = game:GetService("Players")
-                                local plr     = Players.LocalPlayer
-                                local prompt  = plr.PlayerGui:WaitForChild("Prompt")
-                                local mainF   = prompt:WaitForChild("TextButton"):WaitForChild("Frame")
-
-                                -- Step 1: find the one child‑Frame that has 3 nested Frames (and no direct TextButton),
-                                -- then inside those 3 Frames grab its TextButton and click it.
-                                for _, f in ipairs(mainF:GetChildren()) do
-                                    if f:IsA("Frame") then
-                                        -- count direct Frame children
-                                        local frameCount = 0
-                                        for _, ch in ipairs(f:GetChildren()) do
-                                            if ch:IsA("Frame") then
-                                                frameCount += 1
+                            --print("Debug ▶ #sortedSelectedChallenges =", #sortedSelectedChallenges)
+                        
+                            -- 3) Find best portal
+                            --print("Debug ▶ Total portals available:", #portals)
+                            local best, bestPrio, bestIndex
+                            for i = 1, math.min(3, #portals) do
+                                local p = portals[i]
+                                local pd = p.PortalData or {}
+                                --print(string.format(
+                                --    "Debug ▶ Portal[%d] → Map:%s | Challenge:%s",
+                                --    i,
+                                --    tostring(pd.Map),
+                                --    tostring(pd.Challenges)
+                                --))
+                            
+                                local ch = pd.Challenges
+                                if ch then
+                                    for prio, sel in ipairs(sortedSelectedChallenges) do
+                                        --print(string.format("  Comparing '%s' to '%s' (priority %d)", ch, sel, prio))
+                                        if ch == sel then
+                                            --print("    → Match!")
+                                            if not bestPrio or prio > bestPrio then
+                                                best, bestPrio, bestIndex = p, prio, i
+                                                --print(string.format("      New best: portal #%d (priority %d)", i, prio))
                                             end
+                                            break
                                         end
-                                    
-                                        -- ensure no direct TextButton, but exactly 3 Frames inside
-                                        if frameCount == 3 and not f:FindFirstChildWhichIsA("TextButton") then
-                                            for _, nested in ipairs(f:GetChildren()) do
-                                                if nested:IsA("Frame") then
-                                                    local btn = nested:FindFirstChildWhichIsA("TextButton")
-                                                    if btn then
-                                                        Locals.ActivatePromptButton(btn)
-                                                        break
-                                                    end
+                                    end
+                                else
+                                    --print("  No challenge field on this portal")
+                                end
+                            end
+
+                            if best then
+                                --print(string.format(
+                                --    "Debug ▶ Claiming portal #%d with '%s' (priority %d)",
+                                --    bestIndex, best.PortalData.Challenges, bestPrio
+                                --))
+                                wait(2)
+                                local ok, err = pcall(function()
+                                    rem:FireServer(bestIndex)
+
+                                    local Players = game:GetService("Players")
+                                    local plr     = Players.LocalPlayer
+                                    local prompt  = plr.PlayerGui:WaitForChild("Prompt")
+                                    local mainF   = prompt:WaitForChild("TextButton"):WaitForChild("Frame")
+
+                                    -- Step 1: find the one child‑Frame that has 3 nested Frames (and no direct TextButton),
+                                    -- then inside those 3 Frames grab its TextButton and click it.
+                                    for _, f in ipairs(mainF:GetChildren()) do
+                                        if f:IsA("Frame") then
+                                            -- count direct Frame children
+                                            local frameCount = 0
+                                            for _, ch in ipairs(f:GetChildren()) do
+                                                if ch:IsA("Frame") then
+                                                    frameCount += 1
                                                 end
                                             end
-                                            break
+                                        
+                                            -- ensure no direct TextButton, but exactly 3 Frames inside
+                                            if frameCount == 3 and not f:FindFirstChildWhichIsA("TextButton") then
+                                                for _, nested in ipairs(f:GetChildren()) do
+                                                    if nested:IsA("Frame") then
+                                                        local btn = nested:FindFirstChildWhichIsA("TextButton")
+                                                        if btn then
+                                                            Locals.ActivatePromptButton(btn)
+                                                            break
+                                                        end
+                                                    end
+                                                end
+                                                break
+                                            end
                                         end
                                     end
+
+                                    -- Step 2: find the child‑Frame that has a direct TextButton and click it
+                                    for _, f in ipairs(mainF:GetChildren()) do
+                                        if f:IsA("Frame") then
+                                            local btn = f:FindFirstChildWhichIsA("TextButton")
+                                            if btn then
+                                                Locals.ActivatePromptButton(btn)
+                                                break
+                                            end
+                                        end
+                                    end
+                                end)
+                                if ok then
+                                    --print("Debug ▶ FireServer succeeded")
+                                    Library:Notify({
+                                        Title       = "Success",
+                                        Description = "✅ Claimed portal: " .. best.PortalData.Challenges,
+                                        Time        = 5,
+                                        SoundId     = 18403881159,
+                                    })
+                                else
+                                    print("Debug ▶ Portal claim failed")
+                                    Library:Notify({
+                                        Title       = "Error",
+                                        Description = "❌ Portal claim failed",
+                                        Time        = 5,
+                                        SoundId     = 8400918001,
+                                    })
+                                    --warn("Debug ▶ FireServer failed:", err)
                                 end
 
-                                -- Step 2: find the child‑Frame that has a direct TextButton and click it
-                                for _, f in ipairs(mainF:GetChildren()) do
-                                    if f:IsA("Frame") then
-                                        local btn = f:FindFirstChildWhichIsA("TextButton")
-                                        if btn then
-                                            Locals.ActivatePromptButton(btn)
-                                            break
-                                        end
-                                    end
-                                end
-                            end)
-                            if ok then
-                                --print("Debug ▶ FireServer succeeded")
-                                Library:Notify({
-                                    Title       = "Success",
-                                    Description = "✅ Claimed portal: " .. best.PortalData.Challenges,
-                                    Time        = 5,
-                                    SoundId     = 18403881159,
-                                })
                             else
-                                print("Debug ▶ Portal claim failed")
+                                print("Debug ▶ No matching portal found.")
                                 Library:Notify({
                                     Title       = "Error",
-                                    Description = "❌ Portal claim failed",
+                                    Description = "❌ No portal found",
                                     Time        = 5,
                                     SoundId     = 8400918001,
                                 })
-                                --warn("Debug ▶ FireServer failed:", err)
                             end
-                            
                         else
-                            print("Debug ▶ No matching portal found.")
-                            Library:Notify({
-                                Title       = "Error",
-                                Description = "❌ No portal found",
-                                Time        = 5,
-                                SoundId     = 8400918001,
-                            })
+                            --print("Debug ▶ Auto‑claim is OFF")
                         end
-                    else
-                        --print("Debug ▶ Auto‑claim is OFF")
-                    end
-                end)
+                    end)
+                end
             end
-        end
+        --#endregion
+    --#endregion
+
+    local BossRush_GroupBox = Tabs.Main:AddRightGroupbox("Boss Rush")
+    --#region Boss Rush Section
+        BossRush_GroupBox:AddButton("Join Titan (Boss Rush)", function()
+            if Locals.IsAllowedPlace(12886143095, 18583778121) then
+                game:GetService("ReplicatedStorage").Remotes.Snej.StartBossRush:FireServer("The Wall")
+            else
+                Library:Notify({
+                    Title       = "Error",
+                    Description = "❌ You are not in a lobby!",
+                    Time        = 5,
+                    SoundId     = 8400918001,
+                })
+            end
+        end)
+        BossRush_GroupBox:AddButton("Join Godly (Boss Rush)", function()
+            if Locals.IsAllowedPlace(12886143095, 18583778121) then
+                game:GetService("ReplicatedStorage").Remotes.Snej.StartBossRush:FireServer("Heavens Theatre")
+            else
+                Library:Notify({
+                    Title       = "Error",
+                    Description = "❌ You are not in a lobby!",
+                    Time        = 5,
+                    SoundId     = 8400918001,
+                })
+            end
+        end)
+        BossRush_GroupBox:AddDivider()
+        BossRush_GroupBox:AddLabel("Card Picker")
+        BossRush_GroupBox:AddDropdown("CardPickerSelector", {
+            Values          = {"Raging Power", "Feeding Madness", "Demon Takeover", "Insanity", "Venoshock", 
+                                "Fortune", "Godspeed", "Metal Skin", "Emotional Damage", "Chaos Eater"},
+            Default         = 0,
+            Multi           = true,
         
+            Text            = "Select Card(s) to automatically",
+            Tooltip         = "Will use the selected Map(s)",
+            DisabledTooltip = "I am disabled!",
+        
+            Searchable      = true,
+        
+            Callback = function(Value)
+
+            end,
+        
+            Disabled        = false,
+            Visible         = true,
+        })
+        BossRush_GroupBox:AddToggle("AutoCardPicker", {
+            Text            = "Auto Card Picker",
+            Tooltip         = "Automatically pick the best card for you.",
+        
+            Default         = false,
+            Disabled        = false,
+            Visible         = true,
+            Risky           = false,
+        
+            Callback = function(Value)
+
+            end,
+        })
     --#endregion
 --#endregion
 
@@ -4069,6 +4130,66 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end)
         end
         MonitorEndGame()
+
+
+        local remotesFolder = Locals.ReplicatedStorage:FindFirstChild("Remotes")
+        local CardAction = remotesFolder and remotesFolder:FindFirstChild("CardAction")
+
+        -- priority list (1 = highest)
+        local priorityOrder = {
+            "Raging Power",
+            "Feeding Madness",
+            "Demon Takeover",
+            "Insanity",
+            "Venoshock",
+            "Fortune",
+            "Godspeed",
+            "Metal Skin",
+            "Emotional Damage",
+            "Chaos Eater",
+        }
+        local priorityMap = {}
+        for i, name in ipairs(priorityOrder) do
+            priorityMap[name] = i
+        end
+
+        if not CardAction or not CardAction.OnClientEvent then
+            return
+        else
+            CardAction.OnClientEvent:Connect(function(actionType, cardList, count, flag)
+                -- only on the card‐selection phase
+                if actionType ~= "StartSelection" then return end
+                -- only if auto‐picker is enabled
+                if not Toggles.AutoCardPicker.Value then return end
+            
+                -- grab the user’s dropdown selections (table keyed by name → true)
+                local picks = Options.CardPickerSelector.Value
+            
+                local bestIdx, bestPrio
+                for idx, card in ipairs(cardList or {}) do
+                    local name = card.CardName
+                    --print("Debug ▶ Saw card:", name)
+            
+                    if picks[name] then
+                        local prio = priorityMap[name] or (#priorityOrder + 1)
+                        --print(("Debug ▶ Candidate %q at idx %d has priority %d"):format(name, idx, prio))
+            
+                        if not bestPrio or prio < bestPrio then
+                            bestPrio = prio
+                            bestIdx  = idx
+                        end
+                    end
+                end
+            
+                if bestIdx then
+                    --print("Debug ▶ Auto‐picking card at index", bestIdx)
+                    CardAction:FireServer(bestIdx)
+                else
+                    --print("Debug ▶ No user‐selected cards present; skipping pick.")
+                end
+            end)
+        end
+
     --#endregion
 --#endregion
 
