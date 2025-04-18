@@ -133,6 +133,12 @@ local PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:In
 local TowerInfo = require(game:GetService("ReplicatedStorage").Modules.TowerInfo)
 local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames)
 
+spawn(function()
+    while true do wait(0.2)
+        PlayerData = Locals.ReplicatedStorage.Remotes.GetPlayerData:InvokeServer()
+    end
+end)
+
 local challengeOptions = {"Barebones", "Tower Limit", "Flight", "No Hit", "Speedy", "High Cost", "Short Range", "Immunity"}
 local challengeRatings = {
     ["Barebones"]     = 3,
@@ -765,6 +771,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         Main = Window:AddTab("Main", "house"),
         Summoning = Window:AddTab("Summoning", "atom"),
         AutoPlay = Window:AddTab("Auto Play", "play"),
+        Abilities = Window:AddTab("Abilities", "flower"),
         Macro = Window:AddTab("Macro", "cpu"),
         Webhook = Window:AddTab("Webhook", "webhook"),
         ["UI Settings"] = Window:AddTab("UI Settings", "settings"),
@@ -2589,6 +2596,186 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
 --#endregion
 
+--#region Abilities Section
+    local AutoAbility_GroupBox = Tabs.Abilities:AddLeftGroupbox("Auto Ability")
+    --#region Abilities Section
+        AutoAbility_GroupBox:AddDropdown("Abilities_UseWhen", {
+            Values = {"On Cooldown", "On Boss Spawn", "Boss Near", "On Wave"},
+            Default = 1,
+            Multi = false,
+        
+            Text = "Use Ability When",
+            DisabledTooltip = "I am disabled!",
+        
+            Searchable = true,
+        
+            Callback = function(Value)
+                print(Options.Abilities_UseWhen.Value)
+            end,
+        
+            Disabled = false,
+            Visible = true,
+        })
+        AutoAbility_GroupBox:AddToggle("Abilities_AutoUse", {
+            Text = "Auto Use Abilities",
+            Tooltip = "Will automatically use abilities based on above setting.",
+            DisabledTooltip = "I am disabled!",
+        
+            Default = false,
+            Disabled = false,
+            Visible = true,
+            Risky = false,
+        
+            Callback = function(Value)
+                --print("Akora Hub | MyToggle changed to:", Value)
+            end,
+        })
+
+        spawn(function()
+            -- track which (tower, ability) combos we've already toggled
+            local toggled = {}
+        
+            -- builds a map: requiredUpgrades[unitName][abilityName] = { level=reqIdx, abilityNum=abIdx }
+            local function buildRequiredUpgrades()
+                local reqUpgrades = {}
+                local pd = Locals.ReplicatedStorage.Remotes.GetPlayerData:InvokeServer()
+                for _, slotInfo in pairs(pd.Slots or {}) do
+                    local unitName = slotInfo.Value
+                    if unitName and unitName ~= "" then
+                        local mod = Locals.ReplicatedStorage
+                            .FusionPackage
+                            .Dependencies
+                            .Mock
+                            .MockTowerInfo
+                            :FindFirstChild(unitName)
+                        if mod then
+                            local data = require(mod)
+                            local ups = {}
+                            for _, entry in ipairs(data) do
+                                if entry.Attack then table.insert(ups, entry) end
+                            end
+                            table.sort(ups, function(a,b) return a.Cost < b.Cost end)
+                            for reqIdx, entry in ipairs(ups) do
+                                local absList = entry.Abilities or (entry.Ability and {entry.Ability})
+                                if type(absList) == "table" then
+                                    for abIdx, ability in ipairs(absList) do
+                                        reqUpgrades[unitName] = reqUpgrades[unitName] or {}
+                                        if not reqUpgrades[unitName][ability.Name] then
+                                            reqUpgrades[unitName][ability.Name] = {
+                                                level = reqIdx,
+                                                abilityNum = abIdx
+                                            }
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                return reqUpgrades
+            end
+        
+            -- process a single tower against the requirements
+            local function checkTower(tower, reqUpgrades)
+                local owner = tower:FindFirstChild("Owner")
+                if not (owner and tostring(owner.Value) == Locals.Players.LocalPlayer.Name) then
+                    return
+                end
+                local unitName = tower.Name
+                local reqs = reqUpgrades[unitName]
+                if not reqs then return end
+        
+                local upValObj = tower:FindFirstChild("Upgrade")
+                local currentLevel = (upValObj and upValObj.Value) or 0
+        
+                for abilityName, info in pairs(reqs) do
+                    local reqLevel = info.level
+                    local abilityNum = info.abilityNum
+                    local key = tower:GetDebugId().."|"..abilityName
+        
+                    if currentLevel >= reqLevel and not toggled[key] then
+                        print(("Auto‑enabling ability %s (slot #%d) on tower %s")
+                              :format(abilityName, abilityNum, unitName))
+                        Locals.ReplicatedStorage
+                              .Remotes
+                              .ToggleAutoUse
+                              :FireServer(tower, abilityNum, true)
+                        toggled[key] = true
+                    end
+                end
+            end
+        
+            local childConn
+            while true do
+                -- wait for toggles
+                while not (Toggles.Abilities_AutoUse.Value
+                           and Options.Abilities_UseWhen.Value == "On Cooldown") do
+                    if childConn then childConn:Disconnect(); childConn = nil end
+                    task.wait(1)
+                end
+        
+                -- build requirements once
+                local requiredUpgrades = buildRequiredUpgrades()
+        
+                -- check all existing towers
+                for _, tower in ipairs(Locals.Workspace.Towers:GetChildren()) do
+                    checkTower(tower, requiredUpgrades)
+                end
+        
+                -- listen for newly added towers
+                childConn = Locals.Workspace.Towers.ChildAdded:Connect(function(tower)
+                    checkTower(tower, requiredUpgrades)
+                end)
+        
+                -- re‑evaluate every few seconds in case upgrades changed
+                task.wait(2)
+            end
+        end)
+    --#endregion
+
+    local SpecificUnits = Tabs.Abilities:AddRightGroupbox("Unit Settings")
+    --#region Abilities Section
+        local function fireZaphkol(Mode)
+            wait(0.2) 
+            ReplicatedStorage.Remotes.AbilityRemotes.Zaphkol:FireServer(Mode)
+        end
+
+        local hasKurumi = false
+        for _, slotInfo in pairs(PlayerData.Slots or {}) do
+            if slotInfo.Value == "KurumiEvo" then
+                hasKurumi = true
+                break
+            end
+        end
+
+        if hasKurumi then
+            -- abilityMode = "Support", -- Change this to the mode you want (Buff, Support, DPS)
+            SpecificUnits:AddDropdown("KurumiAbilitySelector", {
+                Values          = {"Buff", "Support", "DPS"},
+                Default         = 2,
+                Multi           = false,
+
+                Text            = "Kurumi Ability",
+                Tooltip         = "Which Kurumi Evo ability to auto‑use",
+                
+                Callback        = function(selected)
+                    
+                end,
+                Disabled        = false,
+                Visible         = true,
+            })
+
+            local z = Locals.ReplicatedStorage.Remotes.AbilityRemotes:FindFirstChild("Zaphkol")
+            if z and z.OnClientEvent then
+                z.OnClientEvent:Connect(function(...)
+                    fireZaphkol(Options.KurumiAbilitySelector.Value)
+                end)
+            end
+        end
+    --#endregion
+--#endregion
+
+
 --#region Macro Section
     --#region Macro - Grab Needed Info
         local macroDirectory = Directory .. "/macro"
@@ -4237,60 +4424,91 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 end
             end)
         end
+        --#region Cannon Spam
+            local FireCannonRemote
+            local remotesFolder
 
-        local FireCannonRemote
-        local remotesFolder
-
-        -- helper: collect all cannon models under Workspace.Map.Map.Cannons
-        local function getCannons()
-            local cannons = {}
-            local mapRoot = Locals.Workspace:FindFirstChild("Map")
-                            and Locals.Workspace.Map:FindFirstChild("Map")
-                            and Locals.Workspace.Map.Map
-            local cannonsFolder = mapRoot and mapRoot:FindFirstChild("Cannons")
-            if cannonsFolder then
-                for _, child in ipairs(cannonsFolder:GetChildren()) do
-                    if child.Name == "Model" and child.PrimaryPart then
-                        table.insert(cannons, child)
+            -- helper: collect all cannon models under Workspace.Map.Map.Cannons
+            local function getCannons()
+                local cannons = {}
+                local mapRoot = Locals.Workspace:FindFirstChild("Map")
+                                and Locals.Workspace.Map:FindFirstChild("Map")
+                                and Locals.Workspace.Map.Map
+                local cannonsFolder = mapRoot and mapRoot:FindFirstChild("Cannons")
+                if cannonsFolder then
+                    for _, child in ipairs(cannonsFolder:GetChildren()) do
+                        if child.Name == "Model" and child.PrimaryPart then
+                            table.insert(cannons, child)
+                        end
                     end
                 end
+                return cannons
             end
-            return cannons
-        end
-
-        -- spam loop control
-        local spamming = false
-        local function startCannonSpam()
-            if spamming then return end
-            if not FireCannonRemote then
-                warn("FireCannon remote missing! Cannot spam.")
-                return
-            end
-        
-            spamming = true
-            task.spawn(function()
-                -- fire each cannon exactly once
-                for _, cannon in ipairs(getCannons()) do
-                    FireCannonRemote:FireServer(cannon)
-                    task.wait(0.1)
+            -- spam loop control
+            local spamming = false
+            local function startCannonSpam()
+                if spamming then return end
+                if not FireCannonRemote then
+                    warn("FireCannon remote missing! Cannot spam.")
+                    return
                 end
-                -- done, allow future retriggers
-                spamming = false
-            end)
-        end
-
-        -- listen for the titan warning in the player's GUI
-        Locals.PlayerGui.DescendantAdded:Connect(function(descendant)
-            if   Toggles.Auto_Cannon_TitanRush.Value
-            and descendant:IsA("TextLabel")
-            and descendant.Text:find("The Colossal Titan is about to stun/destroy several units!")
-            then
-                realRemotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-                FireCannonRemote = realRemotes:WaitForChild("FireCannon")
-                task.wait(0.1)
-                startCannonSpam()
+            
+                spamming = true
+                task.spawn(function()
+                    -- fire each cannon exactly once
+                    for _, cannon in ipairs(getCannons()) do
+                        FireCannonRemote:FireServer(cannon)
+                        task.wait(0.1)
+                    end
+                    -- done, allow future retriggers
+                    spamming = false
+                end)
             end
-        end)
+
+            -- listen for the titan warning in the player's GUI
+            Locals.PlayerGui.DescendantAdded:Connect(function(descendant)
+                if   Toggles.Auto_Cannon_TitanRush.Value
+                and descendant:IsA("TextLabel")
+                and descendant.Text:find("The Colossal Titan is about to stun/destroy several units!")
+                then
+                    realRemotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+                    FireCannonRemote = realRemotes:WaitForChild("FireCannon")
+                    task.wait(0.1)
+                    startCannonSpam()
+                end
+            end)
+        --#endregion
+
+        --#region Boss Detection
+            -- when we detect a boss name in UI, link it to the model
+            function onBossDetected(bossNameText)
+                print("Boss spawned (UI):", bossNameText)
+                local bossModel = Locals.Workspace.Enemies:FindFirstChild(bossNameText)
+                if bossModel then
+                    print(" → Found boss model in workspace.Enemies:", bossModel:GetFullName())
+                else
+                    warn(" → No matching boss model found for:", bossNameText)
+                end
+            end
+
+            -- watch for new boss bars under your cloned GUI
+            Locals.PlayerGui.MainUI.BarHolder.ChildAdded:Connect(function(child)
+                if not child:IsA("ImageLabel") then return end
+            
+                -- immediate check for the TextLabel named "BossName"
+                local bossLabel = child:FindFirstChild("BossName")
+                if bossLabel and bossLabel:IsA("TextLabel") then
+                    onBossDetected(bossLabel.Text)
+                end
+            
+                -- if it appears a moment later, catch it then
+                child.DescendantAdded:Connect(function(desc)
+                    if desc:IsA("TextLabel") and desc.Name == "BossName" then
+                        onBossDetected(desc.Text)
+                    end
+                end)
+            end)
+
     --#endregion
 --#endregion
 
