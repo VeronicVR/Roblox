@@ -1925,6 +1925,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 
         	end,
         })
+
         SmartAutoplay_GroupBox:AddToggle("Autoplay_DebugDisplay", {
         	Text = "Enabled Debug Display",
         	Tooltip = "Will show placement debug parts.",
@@ -2290,6 +2291,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 --print("Akora Hub | MyToggle changed to:", Value)
             end,
         })
+
         ManualLocationPlacement_Groupbox:AddDivider()
         ManualLocationPlacement_Groupbox:AddToggle("Show_ManualPlacements", {
             Text            = "Show Manual Placements",
@@ -2395,6 +2397,35 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         end
     --#endregion
+
+    local SellOnWave_Groupbox = Tabs.AutoPlay:AddLeftGroupbox("Sell On Wave")
+    --#region Autosell On Wave Section
+        SellOnWave_Groupbox:AddInput("Sell_WaveReq", {
+            Text = "Wave",
+            Default = "",
+            Numeric = true,
+            Finished = false,
+            Placeholder = "Wave Required to sell units...",
+            Callback = function(Value)
+            end
+        })
+        
+        SellOnWave_Groupbox:AddToggle("Sell_Enabled", {
+            Text = "Enabled Auto Sell on Wave",
+            Tooltip = "Will automatically sell units at required wave.",
+            DisabledTooltip = "I am disabled!",
+        
+            Default = false,
+            Disabled = false,
+            Visible = true,
+            Risky = false,
+        
+            Callback = function(Value)
+
+            end,
+        })
+    --#endregion
+
 --#endregion
 
 --#region Macro Section
@@ -2854,8 +2885,25 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 end
             end)
         elseif Locals.PlaceId == 12900046592 then
+            local toDisable = {
+                Toggles.Autoplay_Enable,
+                Toggles.ManualPlacements_Play,
+                Toggles.Autoplay_Upgrade,
+            }
             game.ReplicatedStorage.Wave:GetPropertyChangedSignal("Value"):Connect(function()
                 getgenv().MapWave = game:GetService("ReplicatedStorage").Wave.Value
+
+                if Toggles.Sell_Enabled.Value and Options.Sell_WaveReq.Value ~= "" and Options.Sell_WaveReq.Value ~= nil then
+                    print(tonumber(Options.Sell_WaveReq.Value))
+
+                    print(tonumber(getgenv().MapWave))
+                    if getgenv().MapWave and tonumber(getgenv().MapWave) >= tonumber(Options.Sell_WaveReq.Value) then
+                        for _, tg in ipairs(toDisable) do
+                            tg:SetValue(false)
+                        end
+                        Locals.ReplicatedStorage.Remotes.UnitManager.SellAll:FireServer()
+                    end
+                end
             end)
             Cash_Loc = game.Players.LocalPlayer.Cash
             Player_Cash = Cash_Loc.Value
@@ -3539,8 +3587,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         end)
     
-        
-
         function MonitorEndGame()
             local PlayerGui = Locals.Client:WaitForChild("PlayerGui")
             
