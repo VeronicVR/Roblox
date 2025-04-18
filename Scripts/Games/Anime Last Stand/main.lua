@@ -133,7 +133,17 @@ local PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:In
 local TowerInfo = require(game:GetService("ReplicatedStorage").Modules.TowerInfo)
 local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames)
 
-
+local challengeOptions = {"Barebones", "Tower Limit", "Flight", "No Hit", "Speedy", "High Cost", "Short Range", "Immunity"}
+local challengeRatings = {
+    ["Barebones"]     = 3,
+    ["Tower Limit"]   = 8,
+    ["Flight"]        = 7.5,
+    ["No Hit"]        = 8,
+    ["Speedy"]        = 5,
+    ["High Cost"]     = 1,
+    ["Short Range"]   = 3,
+    ["Immunity"]      = 3,
+}
 --#region Autoplay Logic
     if not Locals.IsAllowedPlace(12886143095, 18583778121) then
         getgenv().MapName, getgenv().MapMode, getgenv().MapDifficulty, getgenv().MapWave = workspace.Map.MapName.Value, game.ReplicatedStorage.Gamemode.Value, workspace.Map.MapDifficulty.Value, game.ReplicatedStorage.Wave.Value
@@ -1268,18 +1278,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
     --#endregion
 
     --#region Auto Portal
-        local challengeOptions = {"Barebones", "Tower Limit", "Flight", "No Hit", "Speedy", "High Cost", "Short Range", "Immunity"}
-        local challengeRatings = {
-            ["Barebones"]     = 3,
-            ["Tower Limit"]   = 8,
-            ["Flight"]        = 7.5,
-            ["No Hit"]        = 8,
-            ["Speedy"]        = 5,
-            ["High Cost"]     = 1,
-            ["Short Range"]   = 3,
-            ["Immunity"]      = 3,
-        }
-
         local sortedSelectedChallenges = {}
 
         local function resortChallenges()
@@ -1301,8 +1299,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         end
 
         -- create your groupbox on the Portal tab
-        local Portal_GroupBox = Tabs.Main:AddRightGroupbox("Auto Portal")
-
+        local Portal_GroupBox = Tabs.Main:AddRightGroupbox("Portal")
+        Portal_GroupBox:AddLabel("Auto Claim Portal")
         Portal_GroupBox:AddDropdown("SelectedChallenges", {
             Values          = {"Barebones","Tower Limit","Flight","No Hit","Speedy","High Cost","Short Range","Immunity"},
             Default         = {},
@@ -1328,7 +1326,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             Text            = "Auto Claim Portal",
             Tooltip         = "Automatically pick the best portal for claim and use",
         
-            Default = false,
+            Default  = false,
             Disabled = false,
             Visible  = true,
             Risky    = false,
@@ -1337,7 +1335,79 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 --print("Auto‑claim set to", val)
             end,
         })
+
+        Portal_GroupBox:AddDivider()
+
+        Portal_GroupBox:AddLabel("Auto Next Portal")
+        Portal_GroupBox:AddDropdown("PortalLaunch_Maps", {
+            Values          = NestedMapData["Portal"],
+            Default         = 0,
+            Multi           = true,
         
+            Text            = "Select Map(s)",
+            Tooltip         = "Will use the selected Map(s)",
+            DisabledTooltip = "I am disabled!",
+        
+            Searchable      = true,
+        
+            Callback = function(Value)
+
+            end,
+        
+            Disabled        = false,
+            Visible         = true,
+        })
+        Portal_GroupBox:AddDropdown("PortalLaunch_Challenge", {
+            Values          = {"Barebones","Tower Limit","Flight","No Hit","Speedy","High Cost","Short Range","Immunity"},
+            Default         = 0,
+            Multi           = true,
+        
+            Text            = "Select Challenge(s)",
+            Tooltip         = "Will filter to use the selected Challenge(s)",
+            DisabledTooltip = "I am disabled!",
+        
+            Searchable      = true,
+        
+            Callback = function(Value)
+
+            end,
+        
+            Disabled        = false,
+            Visible         = true,
+        })
+        Portal_GroupBox:AddDropdown("PortalLaunch_Tier", {
+            Values          = { "Tier 1","Tier 2","Tier 3",
+                                "Tier 4","Tier 5","Tier 6",
+                            },
+            Default         = 0,
+            Multi           = true,
+        
+            Text            = "Select Tier(s)",
+            Tooltip         = "Will filter to use the selected Tier(s)",
+            DisabledTooltip = "I am disabled!",
+        
+            Searchable      = true,
+        
+            Callback = function(Value)
+
+            end,
+        
+            Disabled        = false,
+            Visible         = true,
+        })
+        Portal_GroupBox:AddToggle("PortalLaunch_Toggle", {
+            Text            = "Auto Next Portal",
+            Tooltip         = "Automatically use the best portal that matches the settings above after you finish a match.",
+        
+            Default         = false,
+            Disabled        = false,
+            Visible         = true,
+            Risky           = false,
+        
+            Callback = function(val)
+                --print("Auto‑claim set to", val)
+            end,
+        })
         -- initialize our list
         resortChallenges()
 
@@ -1912,7 +1982,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         	Visible = true,
         })
         SmartAutoplay_GroupBox:AddToggle("Autoplay_Enable", {
-        	Text = "Enabled Smart Autoplay",
+        	Text = "Enable Smart Autoplay",
         	Tooltip = "Will automatically place and upgrade units at selected distance.",
         	DisabledTooltip = "I am disabled!",
         
@@ -3242,25 +3312,31 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end               
             
             function PlaceUnitsManual()
-                --print("Debug ▶ PlaceUnitsManual started")
                 wait(0.5)
-                if not getgenv().SmartAutoplay.Autoplace then
-                    --print("Debug ▶ Autoplace flag is false, aborting")
-                    return
-                end
+                if not getgenv().SmartAutoplay.Autoplace then return end
             
                 local units = getgenv().SmartAutoplay.EquippedUnits
-                --print("Debug ▶ EquippedUnits count:", #units)
-                if #units == 0 then
-                    --warn("Debug ▶ No equipped units—aborting manual PlaceUnits.")
-                    return
-                end
+                if #units == 0 then return end
             
+                -- detect Tower‑Limit challenge
                 local isTowerLimit = (getgenv().MapMode == "Portal" or getgenv().MapMode == "Challenge")
                                   and game:GetService("ReplicatedStorage").Challenge.Value == "Tower Limit"
-                --print("Debug ▶ isTowerLimit =", isTowerLimit)
             
-                -- build farm/non‑farm lists and sortedUnitList
+                -- count existing towers if needed
+                local initialTowerCount = 0
+                if isTowerLimit then
+                    local tf = workspace:FindFirstChild("Towers")
+                    if tf then
+                        for _, t in ipairs(tf:GetChildren()) do
+                            local owner = t:FindFirstChild("Owner")
+                            if owner and tostring(owner.Value) == game.Players.LocalPlayer.Name then
+                                initialTowerCount += 1
+                            end
+                        end
+                    end
+                end
+            
+                -- prepare sorted unit list
                 local farmUnits, nonfarmUnits = {}, {}
                 local farmNames = {
                     Idol=true, ["Idol (Pop-Star!)"]=true,
@@ -3289,55 +3365,56 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     table.sort(all, function(a,b) return a.InitCost < b.InitCost end)
                     sortedUnitList = all
                 end
-                --print("Debug ▶ Sorted unit list size:", #sortedUnitList)
             
-                -- track placed counts
+                -- track how many of each UnitID have been placed
                 local placedCounts = {}
                 for _, e in ipairs(sortedUnitList) do
                     placedCounts[e.UnitID] = CurrentPlace(e.UnitID)
                 end
             
-                -- build a map: displayName → pillar
+                -- map displayName → pillar
                 local pillarMap = {}
                 for _, dat in pairs(ManualMarkers) do
                     local lbl = dat.gui:FindFirstChildWhichIsA("TextLabel")
                     if lbl and lbl.Text ~= "" then
                         pillarMap[lbl.Text] = dat.pillar
-                        --print("Debug ▶ Registered pillar for:", lbl.Text, "at", dat.pillar.Position)
                     end
                 end
             
-                -- place each unit only at its matching pillar
+                -- track new towers placed this run
+                local newPlacedTotal = 0
+            
+                -- place each unit at its matching pillar
                 for _, entry in ipairs(sortedUnitList) do
                     local disp   = UnitNames[entry.TrueName] or entry.TrueName
                     local pillar = pillarMap[disp]
-                    if not pillar then
-                        --print("Debug ▶ No manual pillar for unit", disp, "- skipping.")
-                    else
+                    if pillar then
                         local center       = pillar.Position
                         local capVal       = Options["SmartPlay_PlaceCap_Unit"..entry.Slot].Value
                         local effectiveCap = math.min(entry.MaxPlacement, capVal)
                         local offsets      = getPatternOffsets(effectiveCap, 2.5)
-                        --print("Debug ▶ Placing", disp, "count:", effectiveCap, "around pillar at", center)
             
-                        for idx, off in ipairs(offsets) do
-                            if placedCounts[entry.UnitID] >= effectiveCap then break end
-                            if not getgenv().SmartAutoplay.Autoplace then
-                                --print("Debug ▶ Autoplace disabled, aborting")
+                        for _, off in ipairs(offsets) do
+                            -- enforce Tower Limit
+                            if isTowerLimit and (initialTowerCount + newPlacedTotal) >= 5 then
+                                getgenv().SmartAutoplay.FinishedPlacing = true
+                                spawn(AutoUpgradeUnits)
                                 return
                             end
-                            
-                            -- ◀︎ NEW: wait until we have enough cash for this unit
+            
+                            if placedCounts[entry.UnitID] >= effectiveCap then break end
+                            if not getgenv().SmartAutoplay.Autoplace then return end
+            
+                            -- wait for enough cash
                             local cost = entry.InitCost
                             while Player_Cash < cost do
-                                --print("Debug ▶ Waiting for cash to place", disp, ":", Player_Cash, "/", cost)
                                 wait(0.5)
                                 if not getgenv().SmartAutoplay.Autoplace then return end
                             end
-                        
+            
                             wait(0.1)
             
-                            -- raycast floor Y with blacklist
+                            -- raycast down with blacklist
                             local origin = center + off + Vector3.new(0,50,0)
                             local params = RaycastParams.new()
                             params.FilterType = Enum.RaycastFilterType.Blacklist
@@ -3350,16 +3427,16 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             local hit    = workspace:Raycast(origin, Vector3.new(0,-100,0), params)
                             local floorY = hit and hit.Position.Y or (center.Y + 1)
             
-                            -- compute half‑height
+                            -- compute model half‑height
                             local clone = game.ReplicatedStorage.Units[entry.UnitName]:Clone()
                             local minY, maxY
                             for _, pn in ipairs({"Head","HumanoidRootPart","Left Arm","Right Arm","Left Leg","Right Leg","Torso"}) do
                                 local p = clone:FindFirstChild(pn, true)
                                 if p and p:IsA("BasePart") then
-                                    local t = p.Position.Y + p.Size.Y/2
-                                    local b = p.Position.Y - p.Size.Y/2
-                                    minY = minY and math.min(minY, b) or b
-                                    maxY = maxY and math.max(maxY, t) or t
+                                    local top = p.Position.Y + p.Size.Y/2
+                                    local bot = p.Position.Y - p.Size.Y/2
+                                    minY = minY and math.min(minY, bot) or bot
+                                    maxY = maxY and math.max(maxY, top) or top
                                 end
                             end
                             clone:Destroy()
@@ -3371,58 +3448,33 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                 center.Z + off.Z
                             )
             
-                            --print("Debug ▶ Firing PlaceTower for", disp, "at", placeCFrame.Position)
                             Locals.ReplicatedStorage.Remotes.PlaceTower:FireServer(entry.UnitName, placeCFrame)
                             wait(0.5)
             
                             if Locals.isPlacedAt(placeCFrame.Position, entry.UnitName) then
                                 placedCounts[entry.UnitID] = placedCounts[entry.UnitID] + 1
-                                --print("Debug ▶ Placed", disp, "(", placedCounts[entry.UnitID], "/", effectiveCap, ")")
-                            else
-                                --print("Debug ▶ Failed to place", disp)
+                                newPlacedTotal += 1
                             end
                         end
                     end
                 end
             
-                --print("Debug ▶ Manual placement pass complete")
                 getgenv().SmartAutoplay.FinishedPlacing = true
                 spawn(AutoUpgradeUnits)
             
-                -- watcher: re‑trigger if more units are needed
+                -- watcher: re‑trigger if more units are needed (and respect tower limit)
                 spawn(function()
-                    --print("Debug ▶ Starting manual‑placement watcher")
                     while true do
                         wait(2)
-                        --print("Debug ▶ Watcher tick")
-            
-                        -- tower‑limit guard
-                        if isTowerLimit then
-                            local towerCount = 0
-                            local tf = workspace:FindFirstChild("Towers")
-                            if tf then
-                                for _, t in ipairs(tf:GetChildren()) do
-                                    local o = t:FindFirstChild("Owner")
-                                    if o and o.Value == game.Players.LocalPlayer.UserId then
-                                        towerCount = towerCount + 1
-                                    end
-                                end
-                            end
-                            --print("Debug ▶ Current tower count:", towerCount)
-                            if towerCount >= 5 then
-                                --print("Debug ▶ Tower limit reached—stopping watcher")
-                                return
-                            end
+                        if isTowerLimit and (initialTowerCount + newPlacedTotal) >= 5 then
+                            return
                         end
-            
-                        -- re‑run if any unit still below cap
                         for _, entry in ipairs(sortedUnitList) do
                             local reqWave    = Options["SmartPlay_PlaceWave_Unit"..entry.Slot].Value
                             if getgenv().MapWave >= reqWave then
                                 local capVal       = Options["SmartPlay_PlaceCap_Unit"..entry.Slot].Value
                                 local effectiveCap = math.min(entry.MaxPlacement, capVal)
                                 if CurrentPlace(entry.UnitID) < effectiveCap then
-                                    --print("Debug ▶ Need more of", UnitNames[entry.TrueName] or entry.TrueName)
                                     getgenv().SmartAutoplay.FinishedPlacing = false
                                     spawn(PlaceUnitsManual)
                                     return
@@ -3560,13 +3612,18 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         Toggles.Autoplay_Enable:OnChanged(function()
             if Toggles.Autoplay_Enable.Value then  
                 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
-                    
-                    generateCubes()
+                    repeat wait() 
+                        if not Toggles.Autoplay_Enable.Value then return end 
+                    until game.ReplicatedStorage.PlayersReady.Value == true
 
-                    repeat wait() until game.ReplicatedStorage.PlayersReady.Value == true
-                    getgenv().SmartAutoplay.Autoplace = true
-                    getgenv().MatchStartTime = os.time()
-                    PlaceUnits()
+                    --generateCubes()
+                    if not Toggles.Autoplay_Enable.Value then 
+                        return 
+                    else
+                        getgenv().SmartAutoplay.Autoplace = true
+                        getgenv().MatchStartTime = os.time()
+                        PlaceUnits()
+                    end
                 else
                     return
                 end
@@ -3575,12 +3632,21 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         end)
 
-        Toggles.ManualPlacements_Play:OnChanged(function(on)
-            getgenv().SmartAutoplay.Autoplace = on
-            if on then
-                repeat wait() until game.ReplicatedStorage.PlayersReady.Value == true
-                -- kick off the manual routine instead of the cube‑based one
-                spawn(PlaceUnitsManual)
+        Toggles.ManualPlacements_Play:OnChanged(function()
+            if Toggles.ManualPlacements_Play.Value then
+                if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+                    repeat wait() 
+                        if not Toggles.ManualPlacements_Play.Value then return end 
+                    until game.ReplicatedStorage.PlayersReady.Value == true
+
+                    if not Toggles.ManualPlacements_Play.Value then 
+                        return 
+                    else
+                        getgenv().SmartAutoplay.Autoplace = true
+                        getgenv().MatchStartTime = os.time()
+                        spawn(PlaceUnitsManual)
+                    end
+                end
             end
         end)
 
@@ -3849,21 +3915,140 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
                         local Buttons = child.BG and child.BG:FindFirstChild("Buttons")
                         if Buttons then
-                            if Toggles.AutoRetry.Value and Buttons:FindFirstChild("Retry") then
-                                Locals.ActivatePromptButton(Buttons.Retry)
-                            elseif Toggles.AutoNext.Value and Buttons:FindFirstChild("Next") then
-                                if Toggles.AutoClaimPortal.Value and getgenv().MapMode == "Portal" then
-                                    print("FUCKKKK")
-
-                                    --local args = {
-                                    --    "098e41db-3b9e-423a-bb8c-31d30e6180a0"
-                                    --}
-                                    --game:GetService("ReplicatedStorage").Remotes.Portals.Activate:InvokeServer(unpack(args))
+                            if (Toggles.AutoNext.Value == true or Toggles.PortalLaunch_Toggle.Value == true) and Buttons:FindFirstChild("Next") then
+                                NewPlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
+                                if Toggles.PortalLaunch_Toggle.Value then
+                                    local portals = NewPlayerData.PortalData or {}
+                                    --print("Debug ▶ PortalLaunch starting. MapName =", getgenv().MapName)
+                                                                    
+                                    -- build + debug approved maps (handles both { [“Map”]=true } and {“Map”} forms)
+                                    local approvedMaps = {}
+                                    --print("Debug ▶ Selected Maps:")
+                                    for k, v in pairs(Options.PortalLaunch_Maps.Value) do
+                                        if type(k) == "number" and type(v) == "string" then
+                                            approvedMaps[v] = true
+                                            --print("  ▶", v)
+                                        elseif type(k) == "string" and v == true then
+                                            approvedMaps[k] = true
+                                            --print("  ▶", k)
+                                        end
+                                    end
+                                    
+                                    -- build + debug approved challenges
+                                    local approvedChallenges = {}
+                                    --print("Debug ▶ Selected Challenges:")
+                                    do
+                                        local cval = Options.PortalLaunch_Challenge.Value
+                                        if type(cval) == "table" then
+                                            for k, v in pairs(cval) do
+                                                if type(k) == "number" and type(v) == "string" then
+                                                    approvedChallenges[v] = true
+                                                    --print("  ▶", v)
+                                                elseif type(k) == "string" and v == true then
+                                                    approvedChallenges[k] = true
+                                                    --print("  ▶", k)
+                                                end
+                                            end
+                                        elseif type(cval) == "string" then
+                                            approvedChallenges[cval] = true
+                                            --print("  ▶", cval)
+                                        end
+                                    end
+                                    
+                                    -- build + debug allowed tiers
+                                    local allowedTiers = {}
+                                    --print("Debug ▶ Selected Tiers:")
+                                    for k, v in pairs(Options.PortalLaunch_Tier.Value) do
+                                        local tierStr
+                                        if type(k) == "number" and type(v) == "string" then
+                                            tierStr = v
+                                        elseif type(k) == "string" and v == true then
+                                            tierStr = k
+                                        end
+                                        if tierStr then
+                                            local n = tonumber(tierStr:match("%d+"))
+                                            if n then
+                                                allowedTiers[n] = true
+                                                --print("  ▶ Tier", n)
+                                            end
+                                        end
+                                    end
+                                    
+                                    -- now filter portals
+                                    local candidates = {}
+                                    for uid, entry in pairs(portals) do
+                                        local pd = entry.PortalData
+                                        if not pd then
+                                            --print("Debug ▶ Skipping", uid, "- no PortalData")
+                                        else
+                                            local tierNum = tonumber(pd.Tier) or 0
+                                            --print(("Debug ▶ Checking portal %s | Map=%s | Challenge=%s | Tier=%d")
+                                            --    :format(uid, pd.Map, pd.Challenges, tierNum))
+                                        
+                                            local okMap   = approvedMaps[pd.Map]
+                                            local okChal  = approvedChallenges[pd.Challenges]
+                                            local okTier  = allowedTiers[tierNum]
+                                        
+                                            --print(("         Map OK? %s  Challenge OK? %s  Tier OK? %s")
+                                            --    :format(tostring(okMap), tostring(okChal), tostring(okTier)))
+                                        
+                                            if okMap and okChal and okTier then
+                                                table.insert(candidates, {
+                                                    uid    = uid,
+                                                    name   = entry.PortalName or uid,
+                                                    map    = pd.Map,
+                                                    chal   = pd.Challenges,
+                                                    tier   = tierNum,
+                                                    rating = challengeRatings[pd.Challenges] or 0,
+                                                })
+                                                --print("  → Added as candidate")
+                                            end
+                                        end
+                                    end
+                                    
+                                    -- sort + activate or report none
+                                    if #candidates > 0 then
+                                        table.sort(candidates, function(a, b)
+                                            if a.tier ~= b.tier then
+                                                return a.tier > b.tier
+                                            else
+                                                return a.rating > b.rating
+                                            end
+                                        end)
+                                    
+                                        --print("Debug ▶ Final sorted candidates:")
+                                        for i, c in ipairs(candidates) do
+                                            --print(("  %d) %s | Map=%s | Chal=%s | Tier=%d | Rating=%.1f")
+                                            --    :format(i, c.uid, c.map, c.chal, c.tier, c.rating))
+                                        end
+                                    
+                                        local best = candidates[1]
+                                        --print(("Debug ▶ Activating portal %s (Tier %d, Challenge %s)")
+                                        --    :format(best.uid, best.tier, best.chal))
+                                        Locals.ReplicatedStorage.Remotes.Portals.Activate:InvokeServer(best.uid)
+                                        Library:Notify({
+                                            Title = "Success",
+                                            Description = string.format(
+                                                "Using %s portal (%s, Tier %d, Challenge %s)",
+                                                best.name, best.uid, best.tier, best.chal
+                                            ),
+                                            Time = 5,
+                                            SoundId = 7167887983
+                                        })
+                                    else
+                                        Library:Notify({
+                                            Title = "Error",
+                                            Description = "No portal matched map/challenge/tier filters.",
+                                            Time = 5,
+                                            SoundId = 8400918001
+                                        })
+                                    end
                                 else
                                     Locals.ActivatePromptButton(Buttons.Next)
                                 end
-                                Locals.ActivatePromptButton(Buttons.Next)
-                            elseif Toggles.AutoLeave.Value and Buttons:FindFirstChild("Leave") then
+                            elseif Toggles.AutoRetry.Value == true and Buttons:FindFirstChild("Retry") then
+                                    Locals.ActivatePromptButton(Buttons.Retry)
+                            elseif Toggles.AutoLeave.Value == true  and Buttons:FindFirstChild("Leave") then
                                 Locals.ActivatePromptButton(Buttons.Leave)
                             end
                             getgenv().MatchStartTime = os.time()
