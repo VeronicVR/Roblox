@@ -2610,7 +2610,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             Searchable = true,
         
             Callback = function(Value)
-                
+
             end,
         
             Disabled = false,
@@ -2630,10 +2630,47 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 --print("Akora Hub | MyToggle changed to:", Value)
             end,
         })
+        AutoAbility_GroupBox:AddToggle("Abilities_BlacklistNukes", {
+            Text = "Blacklist Nukes",
+            Tooltip = "Will block any 'Nuke' abilities from being activated automatically.",
+            DisabledTooltip = "I am disabled!",
+        
+            Default = false,
+            Disabled = false,
+            Visible = true,
+            Risky = false,
+        
+            Callback = function(Value)
+                --print("Akora Hub | MyToggle changed to:", Value)
+            end,
+        })
 
         spawn(function()
             -- track which (tower, ability) combos we've already toggled
             local toggled = {}
+        
+            -- defined blacklisted nuke abilities
+            local BlacklistAbility = {
+                ["Power Vows"] = true,
+                ["Malevolent Shrine"] = true,
+                ["Purple: MAXIMUM"] = true,
+                ["Purple: MAXIMUM EX"] = true,
+                ["Auswählen"] = true,
+                ["Ausw\xE4hlen Maximum"] = true,
+                ["Soul Absorption"] = true,
+                ["Serious Sneeze"] = true,
+                ["Final Energy Bomb"] = true,
+                ["Armageddon"] = true,
+                ["Galactic Destroyer"] = true,
+                ["Ultimate Gun"] = true,
+                ["Heavenly Sword"] = true,
+                ["Enhanced Heavenly Sword"] = true, -- ???
+                ["Psychic Hurricane"] = true,
+                ["Plasmatic Burst"] = true,
+                ["Death to All!"] = true,
+                ["Celestial Strike"] = true,
+                ["I AM ATOMIC!"] = true,
+            }
         
             -- builds a map: requiredUpgrades[unitName][abilityName] = { level=reqIdx, abilityNum=abIdx }
             local function buildRequiredUpgrades()
@@ -2662,7 +2699,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                         reqUpgrades[unitName] = reqUpgrades[unitName] or {}
                                         if not reqUpgrades[unitName][ability.Name] then
                                             reqUpgrades[unitName][ability.Name] = {
-                                                level = reqIdx,
+                                                level      = reqIdx,
                                                 abilityNum = abIdx
                                             }
                                         end
@@ -2681,26 +2718,33 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 if not (owner and tostring(owner.Value) == Locals.Players.LocalPlayer.Name) then
                     return
                 end
+        
                 local unitName = tower.Name
-                local reqs = reqUpgrades[unitName]
+                local reqs     = reqUpgrades[unitName]
                 if not reqs then return end
         
-                local upValObj = tower:FindFirstChild("Upgrade")
-                local currentLevel = (upValObj and upValObj.Value) or 0
+                local currentLevel = (tower:FindFirstChild("Upgrade") or {Value=0}).Value
         
                 for abilityName, info in pairs(reqs) do
-                    local reqLevel = info.level
-                    local abilityNum = info.abilityNum
-                    local key = tower:GetDebugId().."|"..abilityName
+                    -- skip if this ability is in your hardcoded blacklist
+                    if BlacklistAbility[abilityName] and Toggles.Abilities_BlacklistNukes.Value then
+                        --print("Skipping blacklisted ability:", abilityName)
+                    else
+                        local reqLevel   = info.level
+                        local abilityNum = info.abilityNum
+                        local key        = tower:GetDebugId().."|"..abilityName
         
-                    if currentLevel >= reqLevel and not toggled[key] then
-                        print(("Auto‑enabling ability %s (slot #%d) on tower %s")
-                              :format(abilityName, abilityNum, unitName))
-                        Locals.ReplicatedStorage
-                              .Remotes
-                              .ToggleAutoUse
-                              :FireServer(tower, abilityNum, true)
-                        toggled[key] = true
+                        if currentLevel >= reqLevel and not toggled[key] then
+                            print(("Auto‑enabling ability %s (slot #%d) on tower %s")
+                                  :format(abilityName, abilityNum, unitName))
+        
+                            Locals.ReplicatedStorage
+                                  .Remotes
+                                  .ToggleAutoUse
+                                  :FireServer(tower, abilityNum, true)
+        
+                            toggled[key] = true
+                        end
                     end
                 end
             end
@@ -2731,13 +2775,14 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 task.wait(2)
             end
         end)
+        
     --#endregion
 
     local SpecificUnits = Tabs.Abilities:AddRightGroupbox("Unit Settings")
     --#region Abilities Section
         local function fireZaphkol(Mode)
             wait(0.2) 
-            ReplicatedStorage.Remotes.AbilityRemotes.Zaphkol:FireServer(Mode)
+            Locals.ReplicatedStorage.Remotes.AbilityRemotes.Zaphkol:FireServer(Mode)
         end
 
         local hasKurumi = false
@@ -4482,12 +4527,12 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         --#region Boss Detection
             -- when we detect a boss name in UI, link it to the model
             function onBossDetected(bossNameText)
-                print("Boss spawned (UI):", bossNameText)
+                --print("Boss spawned (UI):", bossNameText)
                 local bossModel = Locals.Workspace.Enemies:FindFirstChild(bossNameText)
                 if bossModel then
-                    print(" → Found boss model in workspace.Enemies:", bossModel:GetFullName())
+                    --print(" → Found boss model in workspace.Enemies:", bossModel:GetFullName())
                 else
-                    warn(" → No matching boss model found for:", bossNameText)
+                    --warn(" → No matching boss model found for:", bossNameText)
                 end
             end
 
