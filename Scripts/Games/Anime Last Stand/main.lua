@@ -69,7 +69,7 @@ local Locals = {
         return sign..int..frac
     end,
     isPlacedAt = function(pos, name)
-        local tol = 1
+        local tol = 2
         for _, inst in ipairs(game.Workspace.Towers:GetChildren()) do
             if inst.Name == name and inst.PrimaryPart then
                 if (inst.PrimaryPart.Position - pos).Magnitude < tol then
@@ -82,6 +82,36 @@ local Locals = {
     safeGet = function(childName)
         local success,obj = pcall(function() return workspace[childName] end)
         return success and obj
+    end,
+    ActivatePromptButton = function(uiElement, buttonIndex)
+        buttonIndex = buttonIndex or 1
+        if uiElement:IsA("TextButton") then
+            uiElement.Selectable = true
+            game:GetService("GuiService").SelectedObject = uiElement
+            game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+            game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+            wait(0.5)
+            game:GetService("GuiService").SelectedObject = nil
+            return
+        end
+    
+        local textButtons = {}
+        for _, child in ipairs(uiElement:GetChildren()) do
+            if child:IsA("TextButton") then
+                table.insert(textButtons, child)
+            end
+        end
+        if #textButtons >= buttonIndex then
+            local selectedButton = textButtons[buttonIndex]
+            selectedButton.Selectable = true
+            game:GetService("GuiService").SelectedObject = selectedButton
+            game:GetService("VirtualInputManager")r:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+            game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+            wait(0.5)
+            game:GetService("GuiService").SelectedObject = nil
+        else
+            warn("No TextButton found at index " .. buttonIndex .. " in the given directory!")
+        end
     end,
     -- Game Specific
 }
@@ -105,6 +135,9 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
     if not Locals.IsAllowedPlace(12886143095, 18583778121) then
         getgenv().MapName, getgenv().MapMode, getgenv().MapDifficulty, getgenv().MapWave = workspace.Map.MapName.Value, game.ReplicatedStorage.Gamemode.Value, workspace.Map.MapDifficulty.Value, game.ReplicatedStorage.Wave.Value
         --#region Vareiables & Functions
+
+
+
             function resetAutoplayState()
                 print("🔄 Resetting Autoplay State...")
                 wait(0.2)
@@ -1313,38 +1346,116 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         ))
                     end
         
-                    -- auto‑claim?
                     if Toggles.AutoClaimPortal.Value then
-                        print("Debug ▶ Auto‑claim enabled, evaluating portals…")
+                        print("Debug ▶ Auto‑claim is ON")
+        
+                        -- 1) Grab raw selectedChallenges table
+                        local raw = Options.SelectedChallenges.Value
+                        print("Debug ▶ RAW Options.SelectedChallenges.Value type:", type(raw))
+        
+                        -- 2) Build sortedSelectedChallenges from keys with true values
+                        sortedSelectedChallenges = {}
+                        if type(raw) == "table" then
+                            for challengeName, isSelected in pairs(raw) do
+                                if isSelected then
+                                    table.insert(sortedSelectedChallenges, challengeName)
+                                    print("Debug ▶ Loaded challenge:", challengeName)
+                                end
+                            end
+                        else
+                            warn("Debug ▶ SelectedChallenges.Value isn’t a table!", tostring(raw))
+                        end
+                        print("Debug ▶ #sortedSelectedChallenges =", #sortedSelectedChallenges)
+        
+                        -- 3) Find best portal
+                        print("Debug ▶ Total portals available:", #portals)
                         local best, bestPrio, bestIndex
                         for i = 1, math.min(3, #portals) do
-                            local p  = portals[i]
-                            local ch = p.PortalData and p.PortalData.Challenges
+                            local p = portals[i]
+                            local pd = p.PortalData or {}
+                            print(string.format(
+                                "Debug ▶ Portal[%d] → Map:%s | Challenge:%s",
+                                i,
+                                tostring(pd.Map),
+                                tostring(pd.Challenges)
+                            ))
+        
+                            local ch = pd.Challenges
                             if ch then
-                                print(string.format("  Candidate #%d has challenge '%s'", i, ch))
                                 for prio, sel in ipairs(sortedSelectedChallenges) do
+                                    print(string.format("  Comparing '%s' to '%s' (priority %d)", ch, sel, prio))
                                     if ch == sel then
-                                        print(string.format("    Matches selected #%d: %s", prio, sel))
-                                        if not bestPrio or prio < bestPrio then
+                                        print("    → Match!")
+                                        if not bestPrio or prio > bestPrio then
                                             best, bestPrio, bestIndex = p, prio, i
-                                            print(string.format("      → New best: portal #%d (priority %d)", i, prio))
+                                            print(string.format("      New best: portal #%d (priority %d)", i, prio))
                                         end
                                         break
                                     end
                                 end
                             else
-                                print(string.format("  Candidate #%d has no PortalData.Challenges", i))
+                                print("  No challenge field on this portal")
                             end
                         end
-        
+
                         if best then
                             print(string.format(
-                                "Debug ▶ Claiming portal #%d with challenge '%s' (priority %d)",
-                                bestIndex,
-                                best.PortalData.Challenges,
-                                bestPrio
+                                "Debug ▶ Claiming portal #%d with '%s' (priority %d)",
+                                bestIndex, best.PortalData.Challenges, bestPrio
                             ))
-                            rem:FireServer(best)
+                            wait(2)
+                            local ok, err = pcall(function()
+                                rem:FireServer(bestIndex)
+
+                                local Players = game:GetService("Players")
+                                local plr     = Players.LocalPlayer
+                                local prompt  = plr.PlayerGui:WaitForChild("Prompt")
+                                local mainF   = prompt:WaitForChild("TextButton"):WaitForChild("Frame")
+
+                                -- Step 1: find the one child‑Frame that has 3 nested Frames (and no direct TextButton),
+                                -- then inside those 3 Frames grab its TextButton and click it.
+                                for _, f in ipairs(mainF:GetChildren()) do
+                                    if f:IsA("Frame") then
+                                        -- count direct Frame children
+                                        local frameCount = 0
+                                        for _, ch in ipairs(f:GetChildren()) do
+                                            if ch:IsA("Frame") then
+                                                frameCount += 1
+                                            end
+                                        end
+                                    
+                                        -- ensure no direct TextButton, but exactly 3 Frames inside
+                                        if frameCount == 3 and not f:FindFirstChildWhichIsA("TextButton") then
+                                            for _, nested in ipairs(f:GetChildren()) do
+                                                if nested:IsA("Frame") then
+                                                    local btn = nested:FindFirstChildWhichIsA("TextButton")
+                                                    if btn then
+                                                        Locals.ActivatePromptButton(btn)
+                                                        break
+                                                    end
+                                                end
+                                            end
+                                            break
+                                        end
+                                    end
+                                end
+
+                                -- Step 2: find the child‑Frame that has a direct TextButton and click it
+                                for _, f in ipairs(mainF:GetChildren()) do
+                                    if f:IsA("Frame") then
+                                        local btn = f:FindFirstChildWhichIsA("TextButton")
+                                        if btn then
+                                            Locals.ActivatePromptButton(btn)
+                                            break
+                                        end
+                                    end
+                                end
+                            end)
+                            if ok then
+                                print("Debug ▶ FireServer succeeded")
+                            else
+                                warn("Debug ▶ FireServer failed:", err)
+                            end
                             Library:Notify({
                                 Title       = "Success",
                                 Description = "✅ Claimed portal: " .. best.PortalData.Challenges,
@@ -1352,7 +1463,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                 SoundId     = 18403881159,
                             })
                         else
-                            print("Debug ▶ No matching portal found for selected challenges.")
+                            print("Debug ▶ No matching portal found.")
                             Library:Notify({
                                 Title       = "Error",
                                 Description = "❌ No portal found",
@@ -1360,10 +1471,13 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                 SoundId     = 8400918001,
                             })
                         end
+                    else
+                        print("Debug ▶ Auto‑claim is OFF")
                     end
                 end)
             end
         end
+        
     --#endregion
 --#endregion
 
@@ -2807,6 +2921,13 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     return
                 end
             
+                -- check if Tower‑Limit challenge is active
+                local isTowerLimit = (getgenv().MapMode == "Portal" or getgenv().MapMode == "Challenge")
+                                 and game:GetService("ReplicatedStorage").Challenge.Value == "Tower Limit"
+            
+                --print(isTowerLimit and "Debug ▶ Tower Limit challenge active." or "Debug ▶ No Tower Limit challenge.")
+                
+                -- sort placements and units (unchanged)
                 table.sort(globalPlacements, function(a, b)
                     local aNum = tonumber(a.Name:match("Placement_(%d+)")) or 0
                     local bNum = tonumber(b.Name:match("Placement_(%d+)")) or 0
@@ -2815,13 +2936,10 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             
                 local sortedUnitList, farmUnits, nonfarmUnits = {}, {}, {}
                 local farmUnitNames = {
-                    ["Idol"] = true,
-                    ["Idol (Pop-Star!)"] = true,
+                    ["Idol"] = true, ["Idol (Pop-Star!)"] = true,
                     ["Businessman Yojin"] = true,
-                    ["Demon Child"] = true,
-                    ["Demon Child (Unleashed)"] = true,
-                    ["Best Waifu"] = true,
-                    ["Speedcart"] = true,
+                    ["Demon Child"] = true, ["Demon Child (Unleashed)"] = true,
+                    ["Best Waifu"] = true, ["Speedcart"] = true,
                 }
             
                 for _, entry in ipairs(getgenv().SmartAutoplay.EquippedUnits) do
@@ -2836,30 +2954,14 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 table.sort(nonfarmUnits, function(a, b) return a.InitCost    < b.InitCost    end)
             
                 if Toggles.Autoplay_PlaceFocusFarm.Value then
-                    -- farm‑first priority
                     for _, u in ipairs(farmUnits)    do table.insert(sortedUnitList, u) end
                     for _, u in ipairs(nonfarmUnits) do table.insert(sortedUnitList, u) end
-                
-                    --[[-- DEBUG:
-                    print(">>> Placement Order: FARM‑FIRST")
-                    for i, u in ipairs(sortedUnitList) do
-                        print(i, u.TrueName, "( Cost:", u.InitCost, ")")
-                    end
-                    --]]
                 else
-                    -- pure cost‑based ordering across all
                     local allUnits = {}
                     for _, u in ipairs(farmUnits)    do table.insert(allUnits, u) end
                     for _, u in ipairs(nonfarmUnits) do table.insert(allUnits, u) end
                     table.sort(allUnits, function(a, b) return a.InitCost < b.InitCost end)
                     sortedUnitList = allUnits
-                
-                    --[[-- DEBUG:
-                    print(">>> Placement Order: COST‑ONLY")
-                    for i, u in ipairs(sortedUnitList) do
-                        print(i, u.TrueName, "( Cost:", u.InitCost, ")")
-                    end
-                    --]]
                 end
             
                 local placedCounts = {}
@@ -2869,76 +2971,79 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             
                 local allEligiblePlaced = false
                 repeat
+                    -- refresh placedCounts
                     for _, entry in ipairs(sortedUnitList) do
                         placedCounts[entry.UnitID] = CurrentPlace(entry.UnitID)
                     end
-                
+            
+                    -- placement attempts
                     for _, entry in ipairs(sortedUnitList) do
                         local requiredWave = Options["SmartPlay_PlaceWave_Unit" .. entry.Slot].Value
                         local capSlider    = Options["SmartPlay_PlaceCap_Unit"   .. entry.Slot].Value
                         local effectiveCap = math.min(entry.MaxPlacement, capSlider)
-                    
+            
                         if getgenv().MapWave >= requiredWave then
-                            while getgenv().SmartAutoplay.Autoplace and placedCounts[entry.UnitID] < effectiveCap do wait(0.1)
+                            -- enforce tower limit before any placement
+                            if isTowerLimit then
+                                local towerCount = 0
+                                local towerFolder = workspace:FindFirstChild("Towers")
+                                if towerFolder then
+                                    for _, tower in ipairs(towerFolder:GetChildren()) do
+                                        local owner = tower:FindFirstChild("Owner")
+                                        if owner and tostring(owner.Value) == game.Players.LocalPlayer.Name then
+                                            towerCount = towerCount + 1
+                                        end
+                                    end
+                                end
+                                if towerCount >= 5 then
+                                    -- clear remainingUnits below by setting flag
+                                    allEligiblePlaced = true
+                                    break
+                                end
+                            end
+            
+                            while getgenv().SmartAutoplay.Autoplace and placedCounts[entry.UnitID] < effectiveCap do
+                                wait(0.1)
                                 if not getgenv().SmartAutoplay.Autoplace then
                                     return
                                 end
-                            
-                                
+            
                                 local cube = NotPlacedCube()
                                 if cube and Player_Cash >= entry.InitCost then
+                                    -- compute placeCFrame as before…
                                     local floorY = findFloorY(cube.Position, 100)
-
                                     local template   = game.ReplicatedStorage.Units[entry.UnitName]
                                     local modelClone = template:Clone()
-
+                                    -- compute height, halfHeight…
                                     local partsToCheck = {
                                         "Head","HumanoidRootPart",
                                         "Left Arm","Right Arm",
                                         "Left Leg","Right Leg",
                                         "Torso",
                                     }
-
                                     local minY, maxY
                                     for _, partName in ipairs(partsToCheck) do
                                         local part = modelClone:FindFirstChild(partName, true)
                                         if part and part:IsA("BasePart") then
                                             local topY = part.Position.Y + part.Size.Y/2
                                             local botY = part.Position.Y - part.Size.Y/2
-                                            minY = (minY and math.min(minY, botY)) or botY
-                                            maxY = (maxY and math.max(maxY, topY)) or topY
+                                            minY = minY and math.min(minY, botY) or botY
+                                            maxY = maxY and math.max(maxY, topY) or topY
                                         end
                                     end
-
-                                    local height
-                                    if minY and maxY then
-                                        height = maxY - minY
-                                    else
-                                        local _, bboxSize = modelClone:GetBoundingBox()
-                                        height = bboxSize.Y
-                                    end
-
-                                    local halfHeight = (height / 2) + 0.25
-
                                     modelClone:Destroy()
-
-                                    local placeCFrame = CFrame.new(
-                                        cube.Position.X,
-                                        floorY + halfHeight,
-                                        cube.Position.Z
-                                    )
-                                
-                                    local placed = false
+                                    local halfHeight = ((maxY and minY) and (maxY - minY) or modelClone:GetBoundingBox())/2 + 0.25
+                                    local placeCFrame = CFrame.new(cube.Position.X, floorY + halfHeight, cube.Position.Z)
+            
                                     for attempt = 1, 2 do
                                         Locals.ReplicatedStorage.Remotes.PlaceTower:FireServer(entry.UnitName, placeCFrame)
                                         wait(0.5)
                                         if Locals.isPlacedAt(placeCFrame.Position, entry.UnitName) then
-                                            placed = true
                                             placedCounts[entry.UnitID] = placedCounts[entry.UnitID] + 1
-                                            cube.Color = Color3.fromRGB(255, 0, 0)  -- red on success
+                                            cube.Color = Color3.fromRGB(255, 0, 0)
                                             break
                                         else
-                                            cube.Color = Color3.fromRGB(255, 255, 0) -- yellow on retry/fail
+                                            cube.Color = Color3.fromRGB(255, 255, 0)
                                         end
                                     end
                                 else
@@ -2948,18 +3053,22 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         end
                     end
             
+                    -- build remainingUnits
                     local remainingUnits = {}
                     for _, entry in ipairs(sortedUnitList) do
                         local requiredWave = Options["SmartPlay_PlaceWave_Unit" .. entry.Slot].Value
-                        if getgenv().MapWave >= requiredWave then
-                            local capSlider    = Options["SmartPlay_PlaceCap_Unit" .. entry.Slot].Value
-                            local effectiveCap = math.min(entry.MaxPlacement, capSlider)
-                            if placedCounts[entry.UnitID] < effectiveCap then
-                                table.insert(remainingUnits, entry)
-                            end
+                        local capSlider    = Options["SmartPlay_PlaceCap_Unit" .. entry.Slot].Value
+                        local effectiveCap = math.min(entry.MaxPlacement, capSlider)
+                        if placedCounts[entry.UnitID] < effectiveCap then
+                            table.insert(remainingUnits, entry)
                         end
                     end
-                
+            
+                    -- if tower limit hit during the loop, clear out remainingUnits
+                    if allEligiblePlaced and isTowerLimit then
+                        remainingUnits = {}
+                    end
+            
                     if #remainingUnits > 0 then
                         wait(2)
                     else
@@ -2973,6 +3082,27 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 spawn(function()
                     while true do
                         wait(2)
+                
+                        -- === new: tower‑limit guard ===
+                        if (getgenv().MapMode == "Portal" or getgenv().MapMode == "Challenge") 
+                        and game:GetService("ReplicatedStorage").Challenge.Value == "Tower Limit" then
+                            local towerCount = 0
+                            local tf = workspace:FindFirstChild("Towers")
+                            if tf then
+                                for _, t in ipairs(tf:GetChildren()) do
+                                    local owner = t:FindFirstChild("Owner")
+                                    if owner and owner.Value == game.Players.LocalPlayer.UserId then
+                                        towerCount = towerCount + 1
+                                    end
+                                end
+                            end
+                            if towerCount >= 5 then
+                                --print("Debug ▶ Tower Limit watcher sees 5 towers—stopping PlaceUnits re‑trigger.")
+                                return
+                            end
+                        end
+                        -- === end tower‑limit guard ===
+                
                         for _, entry in ipairs(sortedUnitList) do
                             local requiredWave = Options["SmartPlay_PlaceWave_Unit" .. entry.Slot].Value
                             if getgenv().MapWave >= requiredWave then
@@ -2988,6 +3118,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     end
                 end)
             end
+        --#endregion                
             
             function AutoUpgradeUnits()
                 spawn(function()
@@ -3134,32 +3265,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         end)
     
-        function ActivatePromptButton(uiElement, buttonIndex)
-            buttonIndex = buttonIndex or 1
-            if uiElement:IsA("TextButton") then
-                uiElement.Selectable = true
-                Locals.GuiService.SelectedObject = uiElement
-                Locals.VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-                Locals.VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-                return
-            end
         
-            local textButtons = {}
-            for _, child in ipairs(uiElement:GetChildren()) do
-                if child:IsA("TextButton") then
-                    table.insert(textButtons, child)
-                end
-            end
-            if #textButtons >= buttonIndex then
-                local selectedButton = textButtons[buttonIndex]
-                selectedButton.Selectable = true
-                Locals.GuiService.SelectedObject = selectedButton
-                Locals.VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-                Locals.VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-            else
-                warn("No TextButton found at index " .. buttonIndex .. " in the given directory!")
-            end
-        end
 
         function MonitorEndGame()
             local PlayerGui = Locals.Client:WaitForChild("PlayerGui")
@@ -3175,7 +3281,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                 local targetButton = container:FindFirstChild("TextButton")
                                 if targetButton and targetButton:IsA("TextButton") then
                                     --if Settings.Main["Auto Rewards Screen"] then
-                                        ActivatePromptButton(targetButton)
+                                    Locals.ActivatePromptButton(targetButton)
                                     --end
                                 else
                                     --warn("Prompt.TextButton.TextButton not found!")
@@ -3189,8 +3295,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     end)
                 elseif child.Name == "EndGameUI" then
                     -- wait for any prompt to close
-                    repeat wait() until not Locals.PlayerGui:FindFirstChild("Prompt")
                     NewPlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
+                    repeat wait() until not Locals.PlayerGui:FindFirstChild("Prompt")
 
                     task.spawn(function()
                         --#region Client Info
@@ -3287,27 +3393,44 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             end
 
                             for _, btn in ipairs(holder:GetChildren()) do
-                                if btn:IsA("TextButton") then
-                                    local itemName, amount
-                                    for _, lbl in ipairs(btn:GetChildren()) do
-                                        if not lbl:IsA("TextLabel") then continue end
-                                    
-                                        if lbl.Name == "Amount" then
-                                            -- extract the number (e.g. "16x" → 16)
-                                            amount = tonumber(lbl.Text:match("(%d+)")) or amount
-                                        elseif lbl.Name == "ItemName" then
-                                            itemName = lbl.Text
-                                        elseif lbl.Name ~= "Cost" then
-                                            -- only warn about truly unexpected labels (e.g. Cost)
-                                            warn("Extra label in", btn.Name, "→", lbl.Name, lbl.Text)
-                                        end
+                                if not btn:IsA("TextButton") then continue end
+                            
+                                local itemName, amount, unitName, portalName, portalTier
+                            
+                                for _, lbl in ipairs(btn:GetChildren()) do
+                                    if not lbl:IsA("TextLabel") then continue end
+                            
+                                    if lbl.Name == "UnitName" then
+                                        unitName = lbl.Text
+                            
+                                    elseif lbl.Name == "PortalName" then
+                                        portalName = lbl.Text .. " Portal"
+                            
+                                    elseif lbl.Name == "PortalTier" then
+                                        portalTier = lbl.Text
+                            
+                                    elseif lbl.Name == "Amount" then
+                                        amount = tonumber(lbl.Text:match("(%d+)")) or amount
+                            
+                                    elseif lbl.Name == "ItemName" then
+                                        itemName = lbl.Text
+                            
+                                    elseif lbl.Name ~= "Cost" and lbl.Name ~= "Level" then
+                                        warn("Extra label in", btn.Name, "→", lbl.Name, lbl.Text)
                                     end
-                                
-                                    if itemName and amount then
-                                        table.insert(rewards, { Name = itemName, Amount = amount })
-                                    else
-                                        warn("Missing Name or Amount for", btn.Name)
-                                    end
+                                end
+                            
+                                if unitName then
+                                    table.insert(rewards, string.format("+1 %s [%s]", unitName, btn.Name))
+                            
+                                elseif portalName and portalTier then
+                                    table.insert(rewards, string.format("+1 %s [%s]", portalName, portalTier))
+                            
+                                elseif itemName and amount then
+                                    table.insert(rewards, { Name = itemName, Amount = amount })
+                            
+                                else
+                                    warn("Missing Name/Amount/UnitName/PortalName for", btn.Name)
                                 end
                             end
                         --#endregion
@@ -3318,6 +3441,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             local res = "UNKNOWN"
 
                             for _, lbl in ipairs(stats and stats:GetDescendants() or {}) do
+                                if lbl:IsA("TextLabel") then warn(lbl.Text) end
                                 if lbl:IsA("TextLabel") and (lbl.Text=="Victory" or lbl.Text=="Defeat") then
                                     if lbl.Text=="Win" then
                                         res = "Victory"
@@ -3363,7 +3487,15 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             else
                                 
                                 local lines = {}
-                                for _,r in ipairs(rewards) do lines[#lines+1] = ("+%d %s"):format(r.Amount,r.Name) end
+                                for _, r in ipairs(rewards) do
+                                    if type(r) == "table" then
+                                        lines[#lines+1] = ("+%d %s"):format(r.Amount, r.Name)
+                                    elseif type(r) == "string" then
+                                        lines[#lines+1] = r
+                                    else
+                                        warn("Unexpected reward type:", r)
+                                    end
+                                end
 
                                 Locals.HttpRequest({
                                     Url     = Options.Webhook_Link.Value,
@@ -3395,11 +3527,11 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         local Buttons = child.BG and child.BG:FindFirstChild("Buttons")
                         if Buttons then
                             if Toggles.AutoRetry.Value and Buttons:FindFirstChild("Retry") then
-                                ActivatePromptButton(Buttons.Retry)
+                                Locals.ActivatePromptButton(Buttons.Retry)
                             elseif Toggles.AutoNext.Value and Buttons:FindFirstChild("Next") then
-                                ActivatePromptButton(Buttons.Next)
+                                Locals.ActivatePromptButton(Buttons.Next)
                             elseif Toggles.AutoLeave.Value and Buttons:FindFirstChild("Leave") then
-                                ActivatePromptButton(Buttons.Leave)
+                                Locals.ActivatePromptButton(Buttons.Leave)
                             end
                             getgenv().MatchStartTime = os.time()
                         end
