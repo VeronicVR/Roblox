@@ -2610,7 +2610,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             Searchable = true,
         
             Callback = function(Value)
-                print(Options.Abilities_UseWhen.Value)
+                
             end,
         
             Disabled = false,
