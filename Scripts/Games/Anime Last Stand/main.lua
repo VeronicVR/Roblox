@@ -116,6 +116,8 @@ local Locals = {
     -- Game Specific
 }
 local Directory = "Akora Hub/Games/" .. GameName .. "/" .. Locals.Client.DisplayName .. " [ @" .. Locals.Client.Name .. " - " .. Locals.Client.UserId .. " ]"
+local cubeContainer
+globalPlacements = {}
 
 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
     getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
@@ -130,6 +132,7 @@ local Cash_Loc, Player_Cash
 local PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
 local TowerInfo = require(game:GetService("ReplicatedStorage").Modules.TowerInfo)
 local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames)
+
 
 --#region Autoplay Logic
     if not Locals.IsAllowedPlace(12886143095, 18583778121) then
@@ -172,7 +175,6 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
             -- Global variables
             getgenv().circlePosition = nil
             local cubes = {}
-            local cubeContainer -- Will be set later
             globalPlacements = {}
         
             -- Returns the world‐space position of the Nth node (Start → selected waypoints → Finish)
@@ -334,14 +336,25 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
             
                 -- clean out any previous visualizer
                 if workspace:FindFirstChild("Placements_Container") then
-                    workspace.Placements_Container:Destroy()
+                    if workspace.Placements_Container:FindFirstChild("PlacementVisualizer") then
+                        workspace.Placements_Container.PlacementVisualizer:Destroy()
+                    end
                 end
             
+                local PlacementContainer
                 -- make the new container
-                PlacementContainer = Instance.new("Folder")
-                PlacementContainer.Name   = "Placements_Container"
-                PlacementContainer.Parent = workspace
+                if not workspace:FindFirstChild("Placements_Container") then
+                    PlacementContainer = Instance.new("Folder")
+                    PlacementContainer.Name   = "Placements_Container"
+                    PlacementContainer.Parent = workspace
+                else
+                    PlacementContainer = workspace.Placements_Container
+                end
             
+                ManualPlacementContainer = Instance.new("Folder")
+                ManualPlacementContainer.Name   = "ManualPlacements_Container"
+                ManualPlacementContainer.Parent = PlacementContainer
+
                 -- make the cylinder
                 cylinder = Instance.new("Part")
                 cylinder.Name        = "PlacementVisualizer"
@@ -354,8 +367,6 @@ local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames
                 cylinder.Color       = Color3.fromRGB(70, 0, 0)
                 cylinder.Transparency= getgenv().debugvisible and 0.8 or 1
                 cylinder.Parent      = PlacementContainer
-            
-                
             
                 -- position the cylinder flush to that surface
                 local surfaceY  = findSurfaceY(basePos)
@@ -751,68 +762,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 --#endregion
 
 --#region UI Settings
-    local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu")
-    MenuGroup:AddButton("Unload UI", function()
-        Library:Unload()
-    end)
-    MenuGroup:AddToggle("KeybindMenuOpen", {
-        Default = Library.KeybindFrame.Visible,
-        Text = "Open Keybind Menu",
-        Callback = function(value)
-            Library.KeybindFrame.Visible = value
-        end,
-    })
-    MenuGroup:AddToggle("ShowCustomCursor", {
-        Text = "Custom Cursor",
-        Default = false,
-        Callback = function(Value)
-            Library.ShowCustomCursor = Value
-        end,
-    })
-    MenuGroup:AddDropdown("NotificationSide", {
-        Values = { "Left", "Right" },
-        Default = "Right",
-
-        Text = "Notification Side",
-
-        Callback = function(Value)
-            Library:SetNotifySide(Value)
-        end,
-    })
-    MenuGroup:AddDropdown("DPIDropdown", {
-        Values = { "50%", "75%", "100%", "125%", "150%", "175%", "200%" },
-        Default = "100%",
-
-        Text = "DPI Scale",
-
-        Callback = function(Value)
-            Value = Value:gsub("%%", "")
-            local DPI = tonumber(Value)
-
-            Library:SetDPIScale(DPI)
-        end,
-    })
-    MenuGroup:AddDivider()
-    MenuGroup:AddLabel("Menu bind")
-        :AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
-
-    Library.ToggleKeybind = Options.MenuKeybind
-
-    local Credits = Tabs["UI Settings"]:AddRightGroupbox("Credits")
-    Credits:AddLabel("Scripter & Creator: Ako")
-    Credits:AddButton("Scripter & Creator: Ako", function()
-        --setclipboard("")
-    end)
-    Credits:AddButton("UI Lib: Deividcomsono", function()
-        setclipboard("https://github.com/deividcomsono/Obsidian")
-        Library:Notify({
-            Title       = "Success",
-            Description = "URL Copied to clipboard!",
-            Time        = 5,
-            SoundId     = 18403881159,
-        })
-    end)
-
+    local hubBtn
     if not Locals.IsAllowedPlace(12886143095, 18583778121) then
         local TweenService     = Locals.TweenService
         local VirtualInput     = Locals.VirtualInputManager
@@ -825,7 +775,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 if not btn:IsA("TextButton") then continue end
 
                 -- clone + rename
-                local hubBtn = btn:Clone()
+                hubBtn = btn:Clone()
                 hubBtn.Name   = "Hub"
                 hubBtn.Parent = subframe
 
@@ -886,6 +836,76 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         end
     end
+
+    local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu")
+    MenuGroup:AddButton("Unload UI", function()
+        Library:Unload()
+        if hubBtn ~= nil then
+            hubBtn:Destroy()
+        end
+        if workspace:FindFirstChild("Placements_Container") then
+            workspace.Placements_Container:Destroy()
+        end
+    end)
+    MenuGroup:AddToggle("KeybindMenuOpen", {
+        Default = Library.KeybindFrame.Visible,
+        Text = "Open Keybind Menu",
+        Callback = function(value)
+            Library.KeybindFrame.Visible = value
+        end,
+    })
+    MenuGroup:AddToggle("ShowCustomCursor", {
+        Text = "Custom Cursor",
+        Default = false,
+        Callback = function(Value)
+            Library.ShowCustomCursor = Value
+        end,
+    })
+    MenuGroup:AddDropdown("NotificationSide", {
+        Values = { "Left", "Right" },
+        Default = "Right",
+
+        Text = "Notification Side",
+
+        Callback = function(Value)
+            Library:SetNotifySide(Value)
+        end,
+    })
+    MenuGroup:AddDropdown("DPIDropdown", {
+        Values = { "50%", "75%", "100%", "125%", "150%", "175%", "200%" },
+        Default = "100%",
+
+        Text = "DPI Scale",
+
+        Callback = function(Value)
+            Value = Value:gsub("%%", "")
+            local DPI = tonumber(Value)
+
+            Library:SetDPIScale(DPI)
+        end,
+    })
+    MenuGroup:AddDivider()
+    MenuGroup:AddLabel("Menu bind")
+        :AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+
+    Library.ToggleKeybind = Options.MenuKeybind
+
+    local Credits = Tabs["UI Settings"]:AddRightGroupbox("Credits")
+    Credits:AddLabel("Scripter & Creator: Ako")
+    Credits:AddButton("Scripter & Creator: Ako", function()
+        --setclipboard("")
+    end)
+    Credits:AddButton("UI Lib: Deividcomsono", function()
+        setclipboard("https://github.com/deividcomsono/Obsidian")
+        Library:Notify({
+            Title       = "Success",
+            Description = "URL Copied to clipboard!",
+            Time        = 5,
+            SoundId     = 18403881159,
+        })
+    end)
+
+    
 --#endregion
 --#region Theme & Save
     ThemeManager:SetLibrary( Library )
@@ -1522,7 +1542,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         until elapsed >= timeout
     
         if not btn then
-            warn("waitForPrompt ▶ prompt never appeared")
+            --warn("waitForPrompt ▶ prompt never appeared")
             return
         end
     
@@ -1772,6 +1792,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             doPull(1)
                             remaining = remaining - cost1
                         end
+                        Toggles.Auto_Summon:SetValue(false)
                     end
                     break
                 elseif settingType == "Till Unit" then
@@ -2158,7 +2179,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 marker.Transparency = 0.5
                 marker.Material     = Enum.Material.Neon
                 marker.Color        = markerColors[i]
-                marker.Parent       = Locals.Workspace.Placements_Container
+                marker.Parent       = Locals.Workspace.Placements_Container.ManualPlacements_Container
         
                 -- raycast params ignoring the marker itself
                 local rayParams2 = RaycastParams.new()
@@ -2192,44 +2213,51 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         end
                         writefile(locationsFile, Locals.HttpService:JSONEncode(out))
         
-                        -- if showing manual placements, update the visual
-                        if Toggles.Show_ManualPlacements.Value then
-                            -- remove old visuals for this slot
-                            if ManualMarkers[i] then
-                                if ManualMarkers[i].pillar then ManualMarkers[i].pillar:Destroy() end
-                                if ManualMarkers[i].gui    then ManualMarkers[i].gui:Destroy()    end
-                            end
-        
-                            local pillar = Instance.new("Part")
-                            pillar.Name       = "ManualPlacementPillar_"..i
-                            pillar.Size       = Vector3.new(0.5, 2.5, 0.5)
-                            pillar.Anchored   = true
-                            pillar.CanCollide = false
-                            pillar.Material   = Enum.Material.Neon
-                            pillar.Color      = markerColors[i] or Color3.new(1,1,1)
-                            pillar.Position   = marker.Position + Vector3.new(0,1,0)
-                            pillar.Parent     = Locals.Workspace
-        
-                            -- attach a BillboardGui with the unit name
-                            local billboard = Instance.new("BillboardGui")
-                            billboard.Name          = "ManualPlacementLabel_"..i
-                            billboard.Adornee       = pillar
-                            billboard.Size          = UDim2.new(0, 100, 0, 50)
-                            billboard.StudsOffset   = Vector3.new(0, 3, 0)
-                            billboard.AlwaysOnTop   = true
-                            billboard.Parent        = pillar
-        
-                            local label = Instance.new("TextLabel")
-                            label.Size               = UDim2.new(1, 0, 1, 0)
-                            label.BackgroundTransparency = 1
-                            label.Text               = displayName
-                            label.TextSize           = 20
-                            label.TextColor3         = markerColors[i] or Color3.new(1,1,1)
-                            label.TextStrokeTransparency = 0
-                            label.Parent             = billboard
-        
-                            ManualMarkers[i] = { pillar = pillar, gui = billboard }
+                        -- remove old visuals for this slot
+                        if ManualMarkers[i] then
+                            if ManualMarkers[i].pillar then ManualMarkers[i].pillar:Destroy() end
+                            if ManualMarkers[i].gui    then ManualMarkers[i].gui:Destroy()    end
                         end
+    
+                        local pillar = Instance.new("Part")
+                        pillar.Name         = "ManualPlacementPillar_"..i
+                        pillar.Size         = Vector3.new(0.5, 2.5, 0.5)
+                        pillar.Anchored     = true
+                        if Toggles.Show_ManualPlacements.Value then
+                            pillar.Transparency = 0
+                        else
+                            pillar.Transparency = 1
+                        end
+                        pillar.CanCollide   = false
+                        pillar.Material     = Enum.Material.Neon
+                        pillar.Color        = markerColors[i] or Color3.new(1,1,1)
+                        pillar.Position     = marker.Position + Vector3.new(0,1,0)
+                        pillar.Parent       = Locals.Workspace.Placements_Container.ManualPlacements_Container
+    
+                        -- attach a BillboardGui with the unit name
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Name          = "ManualPlacementLabel_"..i
+                        billboard.Adornee       = pillar
+                        billboard.Size          = UDim2.new(0, 100, 0, 50)
+                        billboard.StudsOffset   = Vector3.new(0, 3, 0)
+                        billboard.AlwaysOnTop   = true
+                        if Toggles.Show_ManualPlacements.Value then
+                            billboard.Enabled   = true
+                        else
+                            billboard.Enabled   = false
+                        end
+                        billboard.Parent        = pillar
+    
+                        local label = Instance.new("TextLabel")
+                        label.Size               = UDim2.new(1, 0, 1, 0)
+                        label.BackgroundTransparency = 1
+                        label.Text               = displayName
+                        label.TextSize           = 20
+                        label.TextColor3         = markerColors[i] or Color3.new(1,1,1)
+                        label.TextStrokeTransparency = 0
+                        label.Parent             = billboard
+    
+                        ManualMarkers[i] = { pillar = pillar, gui = billboard }
         
                         Library:Notify({
                             Title       = "Saved",
@@ -2274,62 +2302,98 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             Risky = false,
         
             Callback = function(show)
-                if show then
-                    -- for each saved location...
-                    for i, pos in pairs(ManualLocations) do
-                        -- get the unit name for slot i
-                        local slotInfo   = PlayerData.Slots["Slot"..i]
-                        local rawName    = slotInfo and slotInfo.Value or ""
-                        local displayName = ""
-                        if rawName ~= "" then
-                            displayName = UnitNames[rawName] or rawName
-                        end
-        
-                        -- skip if no unit
-                        if displayName ~= "" then
-                            -- create a pillar at the saved pos
-                            local pillar = Instance.new("Part")
-                            pillar.Name       = "ManualPlacementPillar_"..i
-                            pillar.Size       = Vector3.new(0.5, 2.5, 0.5)
-                            pillar.Anchored   = true
-                            pillar.CanCollide = false
-                            pillar.Material   = Enum.Material.Neon
-                            pillar.Color      = markerColors[i] or Color3.new(1,1,1)
-                            pillar.Position   = pos + Vector3.new(0, 1, 0)
-                            pillar.Parent     = Locals.Workspace.Placements_Container
-        
-                            -- attach a BillboardGui with the unit name
-                            local billboard = Instance.new("BillboardGui")
-                            billboard.Name          = "ManualPlacementLabel_"..i
-                            billboard.Adornee       = pillar
-                            billboard.Size          = UDim2.new(0, 100, 0, 50)
-                            billboard.StudsOffset   = Vector3.new(0, 3, 0)
-                            billboard.AlwaysOnTop   = true
-                            billboard.Parent        = pillar
-        
-                            local label = Instance.new("TextLabel")
-                            label.Size               = UDim2.new(1, 0, 1, 0)
-                            label.BackgroundTransparency = 1
-                            label.Text               = displayName
-                            label.TextSize           = 20
-                            label.TextColor3         = markerColors[i] or Color3.new(1,1,1)
-                            label.TextStrokeTransparency = 0
-                            label.Parent             = billboard
-        
-                            -- keep track so we can remove later
-                            ManualMarkers[i] = { pillar = pillar, gui = billboard }
-                        end
-                    end
-                else
-                    -- clear all the markers
-                    for _, data in pairs(ManualMarkers) do
-                        if data.pillar then data.pillar:Destroy() end
-                    end
-                    ManualMarkers = {}
-                end
-            end,
+                
+            end
         })
+        function InitializeManualMarkers()
+            for i, pos in pairs(ManualLocations) do
+                -- figure out what unit’s in slot i
+                local slotInfo    = PlayerData.Slots["Slot"..i]
+                local rawName     = slotInfo and slotInfo.Value or ""
+                local displayName = rawName ~= "" and (UnitNames[rawName] or rawName) or ""
+                if displayName ~= "" then
+                    -- create the pillar
+                    local pillar = Instance.new("Part")
+                    pillar.Name         = "ManualPlacementPillar_"..i
+                    pillar.Size         = Vector3.new(0.5, 2.5, 0.5)
+                    pillar.Anchored     = true
+                    pillar.CanCollide   = false
+                    pillar.Material     = Enum.Material.Neon
+                    pillar.Color        = markerColors[i] or Color3.new(1,1,1)
+                    -- hide or show based on current toggle
+                    pillar.Transparency = Toggles.Show_ManualPlacements.Value and 0 or 1
+                    pillar.Position     = pos + Vector3.new(0,1,0)
+                    pillar.Parent       = Locals.Workspace.Placements_Container.ManualPlacements_Container
         
+                    -- create its BillboardGui
+                    local billboard = Instance.new("BillboardGui")
+                    billboard.Name        = "ManualPlacementLabel_"..i
+                    billboard.Adornee     = pillar
+                    billboard.Size        = UDim2.new(0,100,0,50)
+                    billboard.StudsOffset = Vector3.new(0,3,0)
+                    billboard.AlwaysOnTop = true
+                    billboard.Enabled     = Toggles.Show_ManualPlacements.Value
+                    billboard.Parent      = pillar
+        
+                    local label = Instance.new("TextLabel")
+                    label.Size                   = UDim2.new(1,0,1,0)
+                    label.BackgroundTransparency = 1
+                    label.Text                   = displayName
+                    label.TextSize               = 20
+                    label.TextColor3             = markerColors[i] or Color3.new(1,1,1)
+                    label.TextStrokeTransparency = 0
+                    label.Parent                 = billboard
+        
+                    -- store it so your button‑click or toggle code can later update/hide it
+                    ManualMarkers[i] = { pillar = pillar, gui = billboard }
+                end
+            end
+        end
+        if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+            InitializeManualMarkers()
+        end
+        Toggles.Show_ManualPlacements:OnChanged(function(show)
+            for _, data in pairs(ManualMarkers) do
+                data.pillar.Transparency = show and 0 or 1
+                data.gui.Enabled         = show
+            end
+        end)
+
+        function getPatternOffsets(count, spacing)
+            if count == 1 then
+                return { Vector3.new(0,0,0) }
+            elseif count == 2 then
+                local d = spacing/2
+                return { Vector3.new(-d,0,0), Vector3.new(d,0,0) }
+            elseif count == 3 then
+                local d, h = spacing, math.sqrt(3)/2 * spacing
+                return {
+                    Vector3.new(   0, 0,   d ),
+                    Vector3.new(-h, 0, -d/2),
+                    Vector3.new( h, 0, -d/2),
+                }
+            elseif count == 4 then
+                local d = spacing/2
+                return {
+                    Vector3.new(-d, 0, -d),
+                    Vector3.new( d, 0, -d),
+                    Vector3.new(-d, 0,  d),
+                    Vector3.new( d, 0,  d),
+                }
+            else
+                local offsets = getPatternOffsets(4, spacing)
+                for i = 1, count - 4 do
+                    local base = offsets[((i-1)%4)+1]
+                    local dir  = Vector3.new(
+                        ((i%2==0) and 1 or -1) * spacing,
+                        0,
+                        ((i%2==1) and 1 or -1) * spacing
+                    )
+                    table.insert(offsets, base + dir)
+                end
+                return offsets
+            end
+        end
     --#endregion
 --#endregion
 
@@ -2917,7 +2981,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 return cubePos.Y
             end
 
-            local Debounce = false
             function PlaceUnits()
                 wait(0.5)
                 if not getgenv().SmartAutoplay.Autoplace then
@@ -3125,9 +3188,200 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         end
                     end
                 end)
-            end
-        --#endregion                
+            end               
             
+            function PlaceUnitsManual()
+                --print("Debug ▶ PlaceUnitsManual started")
+                wait(0.5)
+                if not getgenv().SmartAutoplay.Autoplace then
+                    --print("Debug ▶ Autoplace flag is false, aborting")
+                    return
+                end
+            
+                local units = getgenv().SmartAutoplay.EquippedUnits
+                --print("Debug ▶ EquippedUnits count:", #units)
+                if #units == 0 then
+                    --warn("Debug ▶ No equipped units—aborting manual PlaceUnits.")
+                    return
+                end
+            
+                local isTowerLimit = (getgenv().MapMode == "Portal" or getgenv().MapMode == "Challenge")
+                                  and game:GetService("ReplicatedStorage").Challenge.Value == "Tower Limit"
+                --print("Debug ▶ isTowerLimit =", isTowerLimit)
+            
+                -- build farm/non‑farm lists and sortedUnitList
+                local farmUnits, nonfarmUnits = {}, {}
+                local farmNames = {
+                    Idol=true, ["Idol (Pop-Star!)"]=true,
+                    ["Businessman Yojin"]=true,
+                    ["Demon Child"]=true, ["Demon Child (Unleashed)"]=true,
+                    ["Best Waifu"]=true, Speedcart=true,
+                }
+                for _, u in ipairs(units) do
+                    if farmNames[u.TrueName] then
+                        table.insert(farmUnits, u)
+                    else
+                        table.insert(nonfarmUnits, u)
+                    end
+                end
+                table.sort(farmUnits,    function(a,b) return a.InitCost < b.InitCost end)
+                table.sort(nonfarmUnits, function(a,b) return a.InitCost < b.InitCost end)
+            
+                local sortedUnitList = {}
+                if Toggles.Autoplay_PlaceFocusFarm.Value then
+                    for _, u in ipairs(farmUnits)    do table.insert(sortedUnitList, u) end
+                    for _, u in ipairs(nonfarmUnits) do table.insert(sortedUnitList, u) end
+                else
+                    local all = {}
+                    for _, u in ipairs(farmUnits)    do table.insert(all, u) end
+                    for _, u in ipairs(nonfarmUnits) do table.insert(all, u) end
+                    table.sort(all, function(a,b) return a.InitCost < b.InitCost end)
+                    sortedUnitList = all
+                end
+                --print("Debug ▶ Sorted unit list size:", #sortedUnitList)
+            
+                -- track placed counts
+                local placedCounts = {}
+                for _, e in ipairs(sortedUnitList) do
+                    placedCounts[e.UnitID] = CurrentPlace(e.UnitID)
+                end
+            
+                -- build a map: displayName → pillar
+                local pillarMap = {}
+                for _, dat in pairs(ManualMarkers) do
+                    local lbl = dat.gui:FindFirstChildWhichIsA("TextLabel")
+                    if lbl and lbl.Text ~= "" then
+                        pillarMap[lbl.Text] = dat.pillar
+                        --print("Debug ▶ Registered pillar for:", lbl.Text, "at", dat.pillar.Position)
+                    end
+                end
+            
+                -- place each unit only at its matching pillar
+                for _, entry in ipairs(sortedUnitList) do
+                    local disp   = UnitNames[entry.TrueName] or entry.TrueName
+                    local pillar = pillarMap[disp]
+                    if not pillar then
+                        --print("Debug ▶ No manual pillar for unit", disp, "- skipping.")
+                    else
+                        local center       = pillar.Position
+                        local capVal       = Options["SmartPlay_PlaceCap_Unit"..entry.Slot].Value
+                        local effectiveCap = math.min(entry.MaxPlacement, capVal)
+                        local offsets      = getPatternOffsets(effectiveCap, 2.5)
+                        --print("Debug ▶ Placing", disp, "count:", effectiveCap, "around pillar at", center)
+            
+                        for idx, off in ipairs(offsets) do
+                            if placedCounts[entry.UnitID] >= effectiveCap then break end
+                            if not getgenv().SmartAutoplay.Autoplace then
+                                --print("Debug ▶ Autoplace disabled, aborting")
+                                return
+                            end
+                            
+                            -- ◀︎ NEW: wait until we have enough cash for this unit
+                            local cost = entry.InitCost
+                            while Player_Cash < cost do
+                                --print("Debug ▶ Waiting for cash to place", disp, ":", Player_Cash, "/", cost)
+                                wait(0.5)
+                                if not getgenv().SmartAutoplay.Autoplace then return end
+                            end
+                        
+                            wait(0.1)
+            
+                            -- raycast floor Y with blacklist
+                            local origin = center + off + Vector3.new(0,50,0)
+                            local params = RaycastParams.new()
+                            params.FilterType = Enum.RaycastFilterType.Blacklist
+                            params.FilterDescendantsInstances = {
+                                game.Players.LocalPlayer.Character,
+                                workspace:FindFirstChild("Towers"),
+                                workspace:FindFirstChild("Placements_Container"),
+                                workspace:FindFirstChild("Enemies"),
+                            }
+                            local hit    = workspace:Raycast(origin, Vector3.new(0,-100,0), params)
+                            local floorY = hit and hit.Position.Y or (center.Y + 1)
+            
+                            -- compute half‑height
+                            local clone = game.ReplicatedStorage.Units[entry.UnitName]:Clone()
+                            local minY, maxY
+                            for _, pn in ipairs({"Head","HumanoidRootPart","Left Arm","Right Arm","Left Leg","Right Leg","Torso"}) do
+                                local p = clone:FindFirstChild(pn, true)
+                                if p and p:IsA("BasePart") then
+                                    local t = p.Position.Y + p.Size.Y/2
+                                    local b = p.Position.Y - p.Size.Y/2
+                                    minY = minY and math.min(minY, b) or b
+                                    maxY = maxY and math.max(maxY, t) or t
+                                end
+                            end
+                            clone:Destroy()
+                            local halfH = ((maxY and minY) and (maxY-minY) or 2)/2 + 0.25
+            
+                            local placeCFrame = CFrame.new(
+                                center.X + off.X,
+                                floorY + halfH,
+                                center.Z + off.Z
+                            )
+            
+                            --print("Debug ▶ Firing PlaceTower for", disp, "at", placeCFrame.Position)
+                            Locals.ReplicatedStorage.Remotes.PlaceTower:FireServer(entry.UnitName, placeCFrame)
+                            wait(0.5)
+            
+                            if Locals.isPlacedAt(placeCFrame.Position, entry.UnitName) then
+                                placedCounts[entry.UnitID] = placedCounts[entry.UnitID] + 1
+                                --print("Debug ▶ Placed", disp, "(", placedCounts[entry.UnitID], "/", effectiveCap, ")")
+                            else
+                                --print("Debug ▶ Failed to place", disp)
+                            end
+                        end
+                    end
+                end
+            
+                --print("Debug ▶ Manual placement pass complete")
+                getgenv().SmartAutoplay.FinishedPlacing = true
+                spawn(AutoUpgradeUnits)
+            
+                -- watcher: re‑trigger if more units are needed
+                spawn(function()
+                    --print("Debug ▶ Starting manual‑placement watcher")
+                    while true do
+                        wait(2)
+                        --print("Debug ▶ Watcher tick")
+            
+                        -- tower‑limit guard
+                        if isTowerLimit then
+                            local towerCount = 0
+                            local tf = workspace:FindFirstChild("Towers")
+                            if tf then
+                                for _, t in ipairs(tf:GetChildren()) do
+                                    local o = t:FindFirstChild("Owner")
+                                    if o and o.Value == game.Players.LocalPlayer.UserId then
+                                        towerCount = towerCount + 1
+                                    end
+                                end
+                            end
+                            --print("Debug ▶ Current tower count:", towerCount)
+                            if towerCount >= 5 then
+                                --print("Debug ▶ Tower limit reached—stopping watcher")
+                                return
+                            end
+                        end
+            
+                        -- re‑run if any unit still below cap
+                        for _, entry in ipairs(sortedUnitList) do
+                            local reqWave    = Options["SmartPlay_PlaceWave_Unit"..entry.Slot].Value
+                            if getgenv().MapWave >= reqWave then
+                                local capVal       = Options["SmartPlay_PlaceCap_Unit"..entry.Slot].Value
+                                local effectiveCap = math.min(entry.MaxPlacement, capVal)
+                                if CurrentPlace(entry.UnitID) < effectiveCap then
+                                    --print("Debug ▶ Need more of", UnitNames[entry.TrueName] or entry.TrueName)
+                                    getgenv().SmartAutoplay.FinishedPlacing = false
+                                    spawn(PlaceUnitsManual)
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+
             function AutoUpgradeUnits()
                 spawn(function()
                     while Toggles.Autoplay_Upgrade.Value do
@@ -3255,6 +3509,9 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         Toggles.Autoplay_Enable:OnChanged(function()
             if Toggles.Autoplay_Enable.Value then  
                 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+                    
+                    generateCubes()
+
                     repeat wait() until game.ReplicatedStorage.PlayersReady.Value == true
                     getgenv().SmartAutoplay.Autoplace = true
                     getgenv().MatchStartTime = os.time()
@@ -3264,6 +3521,15 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 end
             else
                 getgenv().SmartAutoplay.Autoplace = false
+            end
+        end)
+
+        Toggles.ManualPlacements_Play:OnChanged(function(on)
+            getgenv().SmartAutoplay.Autoplace = on
+            if on then
+                repeat wait() until game.ReplicatedStorage.PlayersReady.Value == true
+                -- kick off the manual routine instead of the cube‑based one
+                spawn(PlaceUnitsManual)
             end
         end)
 
