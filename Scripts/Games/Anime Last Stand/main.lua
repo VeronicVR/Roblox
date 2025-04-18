@@ -1739,7 +1739,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             local function doPull(amount)
                 print(("Pulling %dx banner #%s"):format(amount, bannerStr))
                 Locals.ReplicatedStorage.Remotes.Summon:InvokeServer(amount, bannerStr)
-                wait(0.7)
+                wait(1.2)
                 spawn(function()
                     waitForPrompt()
                 end)
