@@ -1579,31 +1579,55 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
     local BossRush_GroupBox = Tabs.Main:AddRightGroupbox("Boss Rush")
     --#region Boss Rush Section
-        BossRush_GroupBox:AddButton("Join Titan (Boss Rush)", function()
-            if Locals.IsAllowedPlace(12886143095, 18583778121) then
-                game:GetService("ReplicatedStorage").Remotes.Snej.StartBossRush:FireServer("The Wall")
-            else
-                Library:Notify({
-                    Title       = "Error",
-                    Description = "❌ You are not in a lobby!",
-                    Time        = 5,
-                    SoundId     = 8400918001,
-                })
-            end
-        end)
-        BossRush_GroupBox:AddButton("Join Godly (Boss Rush)", function()
-            if Locals.IsAllowedPlace(12886143095, 18583778121) then
-                game:GetService("ReplicatedStorage").Remotes.Snej.StartBossRush:FireServer("Heavens Theatre")
-            else
-                Library:Notify({
-                    Title       = "Error",
-                    Description = "❌ You are not in a lobby!",
-                    Time        = 5,
-                    SoundId     = 8400918001,
-                })
-            end
-        end)
+        BossRush_GroupBox:AddLabel("Joiner")
+        BossRush_GroupBox:AddToggle("JoinTitan_BossRush", {
+            Text            = "Auto Join (Titan Rush)",
+            --Tooltip         = "Will automatically fire the cannons at the boss once they become active.",
+        
+            Default         = false,
+            Disabled        = false,
+            Visible         = true,
+            Risky           = false,
+        
+            Callback = function(Value)
+                
+            end,
+        })
+
+        BossRush_GroupBox:AddToggle("JoinGodly_BossRush", {
+            Text            = "Auto Join (Godly Rush)",
+            --Tooltip         = "Will automatically fire the cannons at the boss once they become active.",
+        
+            Default         = false,
+            Disabled        = false,
+            Visible         = true,
+            Risky           = false,
+        
+            Callback = function(Value)
+
+            end,
+        })
+
+
         BossRush_GroupBox:AddDivider()
+
+        BossRush_GroupBox:AddLabel("Boss Rush Functions")
+        BossRush_GroupBox:AddToggle("Auto_Cannon_TitanRush", {
+            Text            = "Auto Fire Cannons (Titan Rush)",
+            Tooltip         = "Will automatically fire the cannons at the boss once they become active.",
+        
+            Default         = false,
+            Disabled        = false,
+            Visible         = true,
+            Risky           = false,
+        
+            Callback = function(Value)
+
+            end,
+        })
+
+        BossRush_GroupBox:AddDivider()
+
         BossRush_GroupBox:AddLabel("Card Picker")
         BossRush_GroupBox:AddDropdown("CardPickerSelector", {
             Values          = {"Raging Power", "Feeding Madness", "Demon Takeover", "Insanity", "Venoshock", 
@@ -3711,12 +3735,36 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         end)
 
-        Toggles.Autoplay_Upgrade:OnChanged(function()
-            if Toggles.Autoplay_Upgrade.Value then 
-
+        Toggles.JoinTitan_BossRush:OnChanged(function()
+            if Toggles.JoinTitan_BossRush.Value then 
+                if Locals.IsAllowedPlace(12886143095, 18583778121) then
+                    game:GetService("ReplicatedStorage").Remotes.Snej.StartBossRush:FireServer("The Wall")
+                else
+                    --Library:Notify({
+                    --    Title       = "Error",
+                    --    Description = "❌ You are not in a lobby!",
+                    --    Time        = 5,
+                    --    SoundId     = 8400918001,
+                    --})
+                end
             end
         end)
-    
+
+        Toggles.JoinGodly_BossRush:OnChanged(function()
+            if Toggles.JoinGodly_BossRush.Value then 
+                if Locals.IsAllowedPlace(12886143095, 18583778121) then
+                    game:GetService("ReplicatedStorage").Remotes.Snej.StartBossRush:FireServer("Heavens Theatre")
+                else
+                    --Library:Notify({
+                    --    Title       = "Error",
+                    --    Description = "❌ You are not in a lobby!",
+                    --    Time        = 5,
+                    --    SoundId     = 8400918001,
+                    --})
+                end
+            end
+        end)
+
         function MonitorEndGame()
             local PlayerGui = Locals.Client:WaitForChild("PlayerGui")
             
@@ -4190,6 +4238,59 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end)
         end
 
+        local FireCannonRemote
+        local remotesFolder
+
+        -- helper: collect all cannon models under Workspace.Map.Map.Cannons
+        local function getCannons()
+            local cannons = {}
+            local mapRoot = Locals.Workspace:FindFirstChild("Map")
+                            and Locals.Workspace.Map:FindFirstChild("Map")
+                            and Locals.Workspace.Map.Map
+            local cannonsFolder = mapRoot and mapRoot:FindFirstChild("Cannons")
+            if cannonsFolder then
+                for _, child in ipairs(cannonsFolder:GetChildren()) do
+                    if child.Name == "Model" and child.PrimaryPart then
+                        table.insert(cannons, child)
+                    end
+                end
+            end
+            return cannons
+        end
+
+        -- spam loop control
+        local spamming = false
+        local function startCannonSpam()
+            if spamming then return end
+            if not FireCannonRemote then
+                warn("FireCannon remote missing! Cannot spam.")
+                return
+            end
+        
+            spamming = true
+            task.spawn(function()
+                -- fire each cannon exactly once
+                for _, cannon in ipairs(getCannons()) do
+                    FireCannonRemote:FireServer(cannon)
+                    task.wait(0.1)
+                end
+                -- done, allow future retriggers
+                spamming = false
+            end)
+        end
+
+        -- listen for the titan warning in the player's GUI
+        Locals.PlayerGui.DescendantAdded:Connect(function(descendant)
+            if   Toggles.Auto_Cannon_TitanRush.Value
+            and descendant:IsA("TextLabel")
+            and descendant.Text:find("The Colossal Titan is about to stun/destroy several units!")
+            then
+                realRemotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+                FireCannonRemote = realRemotes:WaitForChild("FireCannon")
+                task.wait(0.1)
+                startCannonSpam()
+            end
+        end)
     --#endregion
 --#endregion
 
