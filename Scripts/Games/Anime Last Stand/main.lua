@@ -139,6 +139,15 @@ spawn(function()
     end
 end)
 
+Locals.isUnitEquipped = function(targetName)
+    for _, slotInfo in pairs(PlayerData.Slots or {}) do
+        if slotInfo.Value == targetName then
+            return true
+        end
+    end
+    return false
+end
+
 local challengeOptions = {"Barebones", "Tower Limit", "Flight", "No Hit", "Speedy", "High Cost", "Short Range", "Immunity"}
 local challengeRatings = {
     ["Barebones"]     = 3,
@@ -2782,20 +2791,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
     local SpecificUnits = Tabs.Abilities:AddRightGroupbox("Unit Settings")
     --#region Abilities Section
-        local function fireZaphkol(Mode)
-            wait(0.2) 
-            Locals.ReplicatedStorage.Remotes.AbilityRemotes.Zaphkol:FireServer(Mode)
-        end
-
-        local hasKurumi = false
-        for _, slotInfo in pairs(PlayerData.Slots or {}) do
-            if slotInfo.Value == "KurumiEvo" then
-                hasKurumi = true
-                break
-            end
-        end
-
-        if hasKurumi then
+        if Locals.isUnitEquipped("KurumiEvo") then
             -- abilityMode = "Support", -- Change this to the mode you want (Buff, Support, DPS)
             SpecificUnits:AddDropdown("KurumiAbilitySelector", {
                 Values          = {"Buff", "Support", "DPS"},
@@ -2815,7 +2811,18 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             local z = Locals.ReplicatedStorage.Remotes.AbilityRemotes:FindFirstChild("Zaphkol")
             if z and z.OnClientEvent then
                 z.OnClientEvent:Connect(function(...)
-                    fireZaphkol(Options.KurumiAbilitySelector.Value)
+                    Locals.ReplicatedStorage.Remotes.AbilityRemotes.Zaphkol:FireServer(Options.KurumiAbilitySelector.Value)
+                end)
+            end
+        end
+        if Locals.isUnitEquipped("IsseiEvo") then
+            local z = Locals.ReplicatedStorage.Remotes.AbilityRemotes:FindFirstChild("Boost")
+            if z and z.OnClientEvent then
+                z.OnClientEvent:Connect(function(...)
+                    for i = 1, 10 do
+                        Locals.ReplicatedStorage.Remotes.AbilityRemotes.Boost:FireServer()
+                        wait()
+                    end
                 end)
             end
         end
