@@ -1,5 +1,5 @@
 local wait, spawn = task.wait, task.spawn
-repeat wait() until game:IsLoaded()
+repeat wait(2) until game:IsLoaded()
              
 getgenv().debugvisible = false
 getgenv().SmartAutoplay = {
@@ -4322,9 +4322,13 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                             end
                         --end
 
-                        local Buttons = child.BG and child.BG:FindFirstChild("Buttons")
-                        if Buttons then
-                            if (Toggles.AutoNext.Value == true or Toggles.PortalLaunch_Toggle.Value == true) and Buttons:FindFirstChild("Next") then
+                        function handleEndGameButtons(child2)
+                            local Buttons = child2.BG and child2.BG:FindFirstChild("Buttons")
+                            if not Buttons then
+                                return false
+                            end
+                        
+                            if (Toggles.AutoNext.Value or Toggles.PortalLaunch_Toggle.Value) and Buttons:FindFirstChild("Next") then
                                 PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
                                 if Toggles.PortalLaunch_Toggle.Value then
                                     local portals = PlayerData.PortalData or {}
@@ -4455,15 +4459,26 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                                 else
                                     Locals.ActivatePromptButton(Buttons.Next)
                                 end
-                            elseif Toggles.AutoRetry.Value == true and Buttons:FindFirstChild("Retry") then
-                                    Locals.ActivatePromptButton(Buttons.Retry)
-                            elseif Toggles.AutoLeave.Value == true  and Buttons:FindFirstChild("Leave") then
+                            elseif Toggles.AutoRetry.Value and Buttons:FindFirstChild("Retry") then
+                                Locals.ActivatePromptButton(Buttons.Retry)
+                            elseif Toggles.AutoLeave.Value and Buttons:FindFirstChild("Leave") then
                                 Locals.ActivatePromptButton(Buttons.Leave)
                             end
+                        
                             getgenv().MatchStartTime = os.time()
+                            return true
                         end
 
-                        task.wait(0.1)
+                        -- then inside your Prompt/EndGameUI detection:
+                        child.BG and child.BG:FindFirstChild("Buttons")  -- existing check…
+                        if handleEndGameButtons(child) then
+                            -- re‑run every 5 seconds until Buttons vanish:
+                            spawn(function()
+                                while task.wait(5) and handleEndGameButtons(child) do
+                                    -- loop will stop once handle returns false
+                                end
+                            end)
+                        end
                         --Locals.GuiService.SelectedObject = nil
                     end)
 
