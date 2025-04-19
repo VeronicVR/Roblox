@@ -703,15 +703,6 @@ local challengeRatings = {
     end
 --#endregion
 
-function DebugPrint(...)
-    local args = {...}
-    local message = ""
-    for i, v in ipairs(args) do
-        message = message .. tostring(v) .. "\t"
-    end
-    print("[Akora Hub] |", message)
-end
-
 local puppyPuns = {
     "Zero-day alert: Puppy mode activated.",
     "System log: Puppy injection executed on the mainframe.",
@@ -1157,6 +1148,20 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
     --#region Auto Functions
         local MiscFunc_GroupBox = Tabs.Main:AddRightGroupbox("Misc Functions")
+        MiscFunc_GroupBox:AddToggle("AutoStart", {
+        	Text = "Auto Start (Ready Up)",
+        	Tooltip = "Will Automatically ready up a match.",
+        	DisabledTooltip = "I am disabled!",
+
+        	Default = false,
+        	Disabled = false,
+        	Visible = true,
+        	Risky = false,
+
+        	Callback = function(Value)
+        		--print("Akora Hub | MyToggle changed to:", Value)
+        	end,
+        })
         MiscFunc_GroupBox:AddToggle("AutoNext", {
         	Text = "Auto Next",
         	Tooltip = "Will Automatically go to the next Act or Portal (if possible) once match ends.",
@@ -1213,6 +1218,12 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         		--print("Akora Hub | MyToggle changed to:", Value)
         	end,
         })
+
+        Toggles.AutoStart:OnChanged(function(Bool)
+            if Bool then
+                game:GetService("ReplicatedStorage").Remotes.PlayerReady:FireServer()
+            end
+        end)
     --#endregion
 
     --#region Auto Challenge
