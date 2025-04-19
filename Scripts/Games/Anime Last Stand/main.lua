@@ -2849,7 +2849,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
     local SpecificUnits = Tabs.Abilities:AddRightGroupbox("Unit Settings")
     --#region Abilities Section
-        if Locals.isUnitEquipped("KurumiEvo") then
+        if Locals.isUnitEquipped("KurumiEvo") and not Locals.IsAllowedPlace(12886143095, 18583778121) then
             -- abilityMode = "Support", -- Change this to the mode you want (Buff, Support, DPS)
             SpecificUnits:AddDropdown("KurumiAbilitySelector", {
                 Values          = {"Buff", "Support", "DPS"},
@@ -2873,7 +2873,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 end)
             end
         end
-        if Locals.isUnitEquipped("IsseiEvo") then
+        if Locals.isUnitEquipped("IsseiEvo") and not Locals.IsAllowedPlace(12886143095, 18583778121) then
             local z = Locals.ReplicatedStorage.Remotes.AbilityRemotes:FindFirstChild("Boost")
             if z and z.OnClientEvent then
                 z.OnClientEvent:Connect(function(...)
@@ -4477,107 +4477,110 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         end
         MonitorEndGame()
 
+        if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+            --#region Auto Card Picker
+                local remotesFolder = Locals.ReplicatedStorage:FindFirstChild("Remotes")
+                local CardAction = remotesFolder and remotesFolder:FindFirstChild("CardAction")
 
-        local remotesFolder = Locals.ReplicatedStorage:FindFirstChild("Remotes")
-        local CardAction = remotesFolder and remotesFolder:FindFirstChild("CardAction")
-
-        -- priority list (1 = highest)
-        local priorityOrder = {
-            "Raging Power",
-            "Feeding Madness",
-            "Demon Takeover",
-            "Insanity",
-            "Venoshock",
-            "Fortune",
-            "Godspeed",
-            "Metal Skin",
-            "Emotional Damage",
-            "Chaos Eater",
-        }
-        local priorityMap = {}
-        for i, name in ipairs(priorityOrder) do
-            priorityMap[name] = i
-        end
-
-        if not CardAction or not CardAction.OnClientEvent then
-            return
-        else
-            CardAction.OnClientEvent:Connect(function(actionType, cardList, count, flag)
-                -- only on the card‐selection phase
-                if actionType ~= "StartSelection" then return end
-                -- only if auto‐picker is enabled
-                if not Toggles.AutoCardPicker.Value then return end
-            
-                -- grab the user’s dropdown selections (table keyed by name → true)
-                local picks = Options.CardPickerSelector.Value
-            
-                local bestIdx, bestPrio
-                for idx, card in ipairs(cardList or {}) do
-                    local name = card.CardName
-                    --print("Debug ▶ Saw card:", name)
-            
-                    if picks[name] then
-                        local prio = priorityMap[name] or (#priorityOrder + 1)
-                        --print(("Debug ▶ Candidate %q at idx %d has priority %d"):format(name, idx, prio))
-            
-                        if not bestPrio or prio < bestPrio then
-                            bestPrio = prio
-                            bestIdx  = idx
-                        end
-                    end
+                -- priority list (1 = highest)
+                local priorityOrder = {
+                    "Raging Power",
+                    "Feeding Madness",
+                    "Demon Takeover",
+                    "Insanity",
+                    "Venoshock",
+                    "Fortune",
+                    "Godspeed",
+                    "Metal Skin",
+                    "Emotional Damage",
+                    "Chaos Eater",
+                }
+                local priorityMap = {}
+                for i, name in ipairs(priorityOrder) do
+                    priorityMap[name] = i
                 end
-            
-                if bestIdx then
-                    --print("Debug ▶ Auto‐picking card at index", bestIdx)
-                    CardAction:FireServer(bestIdx)
-                else
-                    --print("Debug ▶ No user‐selected cards present; skipping pick.")
-                end
-            end)
-        end
-        --#region Cannon Spam
-            local FireCannonRemote
-            local remotesFolder
 
-            -- helper: collect all cannon models under Workspace.Map.Map.Cannons
-            local function getCannons()
-                local cannons = {}
-                local mapRoot = Locals.Workspace:FindFirstChild("Map")
-                                and Locals.Workspace.Map:FindFirstChild("Map")
-                                and Locals.Workspace.Map.Map
-                local cannonsFolder = mapRoot and mapRoot:FindFirstChild("Cannons")
-                if cannonsFolder then
-                    for _, child in ipairs(cannonsFolder:GetChildren()) do
-                        if child.Name == "Model" and child.PrimaryPart then
-                            table.insert(cannons, child)
-                        end
-                    end
-                end
-                return cannons
-            end
-            -- spam loop control
-            local spamming = false
-            local function startCannonSpam()
-                if spamming then return end
-                if not FireCannonRemote then
-                    warn("FireCannon remote missing! Cannot spam.")
+                if not CardAction or not CardAction.OnClientEvent then
                     return
+                else
+                    CardAction.OnClientEvent:Connect(function(actionType, cardList, count, flag)
+                        -- only on the card‐selection phase
+                        if actionType ~= "StartSelection" then return end
+                        -- only if auto‐picker is enabled
+                        if not Toggles.AutoCardPicker.Value then return end
+                    
+                        -- grab the user’s dropdown selections (table keyed by name → true)
+                        local picks = Options.CardPickerSelector.Value
+                    
+                        local bestIdx, bestPrio
+                        for idx, card in ipairs(cardList or {}) do
+                            local name = card.CardName
+                            --print("Debug ▶ Saw card:", name)
+                        
+                            if picks[name] then
+                                local prio = priorityMap[name] or (#priorityOrder + 1)
+                                --print(("Debug ▶ Candidate %q at idx %d has priority %d"):format(name, idx, prio))
+                            
+                                if not bestPrio or prio < bestPrio then
+                                    bestPrio = prio
+                                    bestIdx  = idx
+                                end
+                            end
+                        end
+                    
+                        if bestIdx then
+                            --print("Debug ▶ Auto‐picking card at index", bestIdx)
+                            CardAction:FireServer(bestIdx)
+                        else
+                            --print("Debug ▶ No user‐selected cards present; skipping pick.")
+                        end
+                    end)
                 end
-            
-                spamming = true
-                task.spawn(function()
-                    -- fire each cannon exactly once
-                    for _, cannon in ipairs(getCannons()) do
-                        FireCannonRemote:FireServer(cannon)
-                        task.wait(0.1)
-                    end
-                    -- done, allow future retriggers
-                    spamming = false
-                end)
-            end
 
-            -- listen for the titan warning in the player's GUI
-            Locals.PlayerGui.DescendantAdded:Connect(function(descendant)
+            --#endregion
+            --#region Cannon Spam
+                local FireCannonRemote
+                local remotesFolder
+
+                -- helper: collect all cannon models under Workspace.Map.Map.Cannons
+                local function getCannons()
+                    local cannons = {}
+                    local mapRoot = Locals.Workspace:FindFirstChild("Map")
+                                    and Locals.Workspace.Map:FindFirstChild("Map")
+                                    and Locals.Workspace.Map.Map
+                    local cannonsFolder = mapRoot and mapRoot:FindFirstChild("Cannons")
+                    if cannonsFolder then
+                        for _, child in ipairs(cannonsFolder:GetChildren()) do
+                            if child.Name == "Model" and child.PrimaryPart then
+                                table.insert(cannons, child)
+                            end
+                        end
+                    end
+                    return cannons
+                end
+                -- spam loop control
+                local spamming = false
+                local function startCannonSpam()
+                    if spamming then return end
+                    if not FireCannonRemote then
+                        warn("FireCannon remote missing! Cannot spam.")
+                        return
+                    end
+                
+                    spamming = true
+                    task.spawn(function()
+                        -- fire each cannon exactly once
+                        for _, cannon in ipairs(getCannons()) do
+                            FireCannonRemote:FireServer(cannon)
+                            task.wait(0.1)
+                        end
+                        -- done, allow future retriggers
+                        spamming = false
+                    end)
+                end
+
+                -- listen for the titan warning in the player's GUI
+                Locals.PlayerGui.DescendantAdded:Connect(function(descendant)
                 if   Toggles.Auto_Cannon_TitanRush.Value
                 and descendant:IsA("TextLabel")
                 and descendant.Text:find("The Colossal Titan is about to stun/destroy several units!")
@@ -4587,12 +4590,12 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     task.wait(0.1)
                     startCannonSpam()
                 end
-            end)
-        --#endregion
+                end)
+            --#endregion
 
-        --#region Boss Detection
-            -- when we detect a boss name in UI, link it to the model
-            function onBossDetected(bossNameText)
+            --#region Boss Detection
+                -- when we detect a boss name in UI, link it to the model
+                function onBossDetected(bossNameText)
                 --print("Boss spawned (UI):", bossNameText)
                 local bossModel = Locals.Workspace.Enemies:FindFirstChild(bossNameText)
                 if bossModel then
@@ -4600,10 +4603,10 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 else
                     --warn(" → No matching boss model found for:", bossNameText)
                 end
-            end
+                end
 
-            -- watch for new boss bars under your cloned GUI
-            Locals.PlayerGui.MainUI.BarHolder.ChildAdded:Connect(function(child)
+                -- watch for new boss bars under your cloned GUI
+                Locals.PlayerGui.MainUI.BarHolder.ChildAdded:Connect(function(child)
                 if not child:IsA("ImageLabel") then return end
             
                 -- immediate check for the TextLabel named "BossName"
@@ -4618,7 +4621,9 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         onBossDetected(desc.Text)
                     end
                 end)
-            end)
+                end)
+            --#endregion
+        end
 
     --#endregion
 --#endregion
