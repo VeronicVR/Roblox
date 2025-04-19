@@ -126,6 +126,8 @@ if not Locals.IsAllowedPlace(12886143095, 18583778121) then
     repeat task.wait() until pg:FindFirstChild("Bottom")
                       and pg.Bottom:FindFirstChild("Frame")
                       and pg.Bottom.Frame.Visible
+else
+    wait(2)
 end
 
 local Cash_Loc, Player_Cash 
