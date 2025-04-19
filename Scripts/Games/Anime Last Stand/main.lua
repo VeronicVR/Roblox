@@ -1678,6 +1678,65 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end,
         })
     --#endregion
+
+    local MapSpecific_Groupbox = Tabs.Main:AddLeftGroupbox("Map Specific Functions")
+    --#region Map Specific Stuff
+        if getgenv().MapName == "Infernal Volcano" then
+            MapSpecific_Groupbox:AddToggle("Auto_Volcano", {
+                Text = "Auto Volcano",
+                Tooltip = "Will automatically interact with Volacanos.",
+                DisabledTooltip = "I am disabled!",
+            
+                Default = false,
+                Disabled = false,
+                Visible = true,
+                Risky = false,
+            
+                Callback = function(Value)
+
+                end,
+            })
+
+            Toggles.Auto_Volcano:OnChanged(function(Bool)
+                if Bool then
+                    local mapFolder = workspace:WaitForChild("Map", 60)
+                    local volcanoesFolder = mapFolder:WaitForChild("Volcanoes", 60)
+
+                    local function interactAndDestroy(volcano)
+                        local prompt = volcano:FindFirstChildWhichIsA("ProximityPrompt")
+                        if not prompt then return end
+                    
+                        if prompt.Enabled and prompt.MaxActivationDistance > 0 then
+                            local originalDistance = prompt.MaxActivationDistance
+                            prompt.MaxActivationDistance = math.huge
+                        
+                            fireproximityprompt(prompt, prompt.HoldDuration + 0.1)
+                        
+                            prompt.MaxActivationDistance = originalDistance
+                        
+                            volcano:Destroy()
+                        end
+                    end
+
+                    volcanoesFolder.ChildAdded:Connect(function(volcano)
+                        task.delay(0.2, function()
+                            if volcano and volcano:IsDescendantOf(volcanoesFolder) then
+                                interactAndDestroy(volcano)
+                            end
+                        end)
+                    end)
+
+                    for _, volcano in ipairs(volcanoesFolder:GetChildren()) do
+                        task.delay(0.2, function()
+                            if volcano and volcano:IsDescendantOf(volcanoesFolder) then
+                                interactAndDestroy(volcano)
+                            end
+                        end)
+                    end
+                end
+            end) 
+        end
+    --#endregion
 --#endregion
 
 --#region Summoning Section
@@ -2006,8 +2065,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 --#endregion
 
 --#region Auto Play Section
+    local SmartAutoplay_GroupBox = Tabs.AutoPlay:AddLeftGroupbox("Smart Auto Play")
     --#region Smart Autoplay Section
-
         local waypointList = {}
         local pathNames = {}
 
@@ -2040,7 +2099,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         end
         
-        local SmartAutoplay_GroupBox = Tabs.AutoPlay:AddLeftGroupbox("Smart Auto Play")
+        
         SmartAutoplay_GroupBox:AddDropdown("Autoplay_Path", {
             Values      = pathNames,
             Default     = 1,
@@ -2182,8 +2241,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         end
     --#endregion
 
+    local Smart_PlaceCap = SmartPlacement_TabBox:AddTab("Place Cap")
     --#region Smart (Place Cap) Settings Section
-        local Smart_PlaceCap = SmartPlacement_TabBox:AddTab("Place Cap")
         for i = 1, 6 do
             Smart_PlaceCap:AddSlider("SmartPlay_PlaceCap_Unit" .. i, {
                 Text = "Unit " .. i,
@@ -2259,8 +2318,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         end
     --#endregion
 
+    local Smart_UpgradeCap = SmartUpgrade_TabBox:AddTab("Upgrade Cap")
     --#region Smart (Upgrade Cap) Settings Section
-        local Smart_UpgradeCap = SmartUpgrade_TabBox:AddTab("Upgrade Cap")
         for i = 1, 6 do
             Smart_UpgradeCap:AddSlider("SmartUpgrade_UpgradeCap_Unit" .. i, {
                 Text = "Unit " .. i,
@@ -2602,7 +2661,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end,
         })
     --#endregion
-
 --#endregion
 
 --#region Abilities Section
