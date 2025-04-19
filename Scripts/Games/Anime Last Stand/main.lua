@@ -2670,6 +2670,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 ["Death to All!"] = true,
                 ["Celestial Strike"] = true,
                 ["I AM ATOMIC!"] = true,
+                ["Shadow King's Domain"] = true,
+                ["12th Shot"] = true, -- Technically a time stop (90 seconds)
             }
         
             -- builds a map: requiredUpgrades[unitName][abilityName] = { level=reqIdx, abilityNum=abIdx }
@@ -2735,15 +2737,15 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                         local key        = tower:GetDebugId().."|"..abilityName
         
                         if currentLevel >= reqLevel and not toggled[key] then
-                            print(("Auto‑enabling ability %s (slot #%d) on tower %s")
-                                  :format(abilityName, abilityNum, unitName))
+                            --print(("Auto‑enabling ability %s (slot #%d) on tower %s")
+                            --      :format(abilityName, abilityNum, unitName))
         
                             Locals.ReplicatedStorage
                                   .Remotes
                                   .ToggleAutoUse
                                   :FireServer(tower, abilityNum, true)
         
-                            toggled[key] = true
+                            --toggled[key] = true
                         end
                     end
                 end
