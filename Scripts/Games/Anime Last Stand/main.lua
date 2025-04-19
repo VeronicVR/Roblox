@@ -40,7 +40,6 @@ local Locals = {
     Client = ClonedPlayers.LocalPlayer,
     PlayerGui = ClonedPlayers.LocalPlayer.PlayerGui,
     Character = ClonedPlayers.LocalPlayer.Character,
-    HumanoidRootPart = ClonedPlayers.LocalPlayer.Character:WaitForChild("HumanoidRootPart"),
     Mouse = ClonedPlayers.LocalPlayer:GetMouse(),
 
     -- Utility
@@ -121,13 +120,13 @@ globalPlacements = {}
 
 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
     getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
-
-    local pg = game.Players.LocalPlayer.PlayerGui
-    repeat task.wait() until pg:FindFirstChild("Bottom")
-                      and pg.Bottom:FindFirstChild("Frame")
-                      and pg.Bottom.Frame.Visible
+    repeat wait() until Locals.PlayerGui:FindFirstChild("Bottom")
+                      and Locals.PlayerGui.Bottom:FindFirstChild("Frame")
+                      and Locals.PlayerGui.Bottom.Frame.Visible
 else
-    wait(2)
+    repeat wait() until Locals.PlayerGui:FindFirstChild("BottomHUD")
+                      and Locals.PlayerGui.BottomHUD:FindFirstChild("Frame")
+                      and Locals.PlayerGui.BottomHUD.Frame.Visible
 end
 
 local Cash_Loc, Player_Cash 
@@ -140,6 +139,10 @@ spawn(function()
         PlayerData = Locals.ReplicatedStorage.Remotes.GetPlayerData:InvokeServer()
     end
 end)
+
+repeat
+    wait()
+until PlayerData and PlayerData.Slots
 
 Locals.isUnitEquipped = function(targetName)
     for _, slotInfo in pairs(PlayerData.Slots or {}) do
@@ -2384,6 +2387,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
         for i = 1, 6 do
             -- determine displayName or disable if none
+            
             local slotInfo   = PlayerData.Slots["Slot"..i]
             local rawName    = slotInfo and slotInfo.Value or ""
             local displayName = ""
@@ -2823,29 +2827,31 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             end
         
             local childConn
-            while true do
-                -- wait for toggles
-                while not (Toggles.Abilities_AutoUse.Value
-                           and Options.Abilities_UseWhen.Value == "On Cooldown") do
-                    if childConn then childConn:Disconnect(); childConn = nil end
-                    task.wait(1)
+            if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+                while true do
+                    -- wait for toggles
+                    while not (Toggles.Abilities_AutoUse.Value
+                               and Options.Abilities_UseWhen.Value == "On Cooldown") do
+                        if childConn then childConn:Disconnect(); childConn = nil end
+                        task.wait(1)
+                    end
+                
+                    -- build requirements once
+                    local requiredUpgrades = buildRequiredUpgrades()
+                
+                    -- check all existing towers
+                    for _, tower in ipairs(Locals.Workspace.Towers:GetChildren()) do
+                        checkTower(tower, requiredUpgrades)
+                    end
+                
+                    -- listen for newly added towers
+                    childConn = Locals.Workspace.Towers.ChildAdded:Connect(function(tower)
+                        checkTower(tower, requiredUpgrades)
+                    end)
+                
+                    -- re‑evaluate every few seconds in case upgrades changed
+                    task.wait(2)
                 end
-        
-                -- build requirements once
-                local requiredUpgrades = buildRequiredUpgrades()
-        
-                -- check all existing towers
-                for _, tower in ipairs(Locals.Workspace.Towers:GetChildren()) do
-                    checkTower(tower, requiredUpgrades)
-                end
-        
-                -- listen for newly added towers
-                childConn = Locals.Workspace.Towers.ChildAdded:Connect(function(tower)
-                    checkTower(tower, requiredUpgrades)
-                end)
-        
-                -- re‑evaluate every few seconds in case upgrades changed
-                task.wait(2)
             end
         end)
         
@@ -3300,8 +3306,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 repeat
                     for i, TeleporterModel in next, QueueTPFolder[queueName]:GetChildren() do
                         if TeleporterModel.Door.UI.PlayerCount.text == "0/4 Players" then
-                            firetouchinterest(TeleporterModel.Door, Locals.HumanoidRootPart, 1)
-                            firetouchinterest(TeleporterModel.Door, Locals.HumanoidRootPart, 0)
+                            firetouchinterest(TeleporterModel.Door, Locals.Character.HumanoidRootPart, 1)
+                            firetouchinterest(TeleporterModel.Door, Locals.Character.HumanoidRootPart, 0)
                             found = true
                             break
                         end
