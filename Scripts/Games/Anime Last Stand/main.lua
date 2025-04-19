@@ -1204,6 +1204,26 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         		--print("Akora Hub | MyToggle changed to:", Value)
         	end,
         })
+        MiscFunc_GroupBox:AddToggle("PlaceAnywhere", {
+        	Text = "Place Anywhere",
+        	Tooltip = "[RISKY] Will allow you to place units anywhere.",
+        	DisabledTooltip = "Currently a WIP!",
+
+        	Default = false,
+        	Disabled = false,
+        	Visible = true,
+        	Risky = true,
+
+        	Callback = function(Value)
+        		--print("Akora Hub | MyToggle changed to:", Value)
+        	end,
+        }) Toggles.AutoStart:OnChanged(function(Bool)
+            if Bool and not Locals.IsAllowedPlace(12886143095, 18583778121) then
+                game:GetService("ReplicatedStorage").Remotes.PlayerReady:FireServer()
+            end
+        end)
+        MiscFunc_GroupBox:AddDivider()
+        MiscFunc_GroupBox:AddLabel("QoL")
         MiscFunc_GroupBox:AddToggle("Mute_SFX", {
             Text = "Mute Cash SFX",
             Tooltip = "Will mute any upgrade or placement sound effects.",
@@ -1224,25 +1244,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 Locals.Client.PlayerGui.CashSFX.Volume = 0.5
             end
         end) 
-
-        MiscFunc_GroupBox:AddToggle("PlaceAnywhere", {
-        	Text = "Place Anywhere",
-        	Tooltip = "Will allow you to place units anywhere.",
-        	DisabledTooltip = "Currently a WIP!",
-
-        	Default = false,
-        	Disabled = false,
-        	Visible = true,
-        	Risky = true,
-
-        	Callback = function(Value)
-        		--print("Akora Hub | MyToggle changed to:", Value)
-        	end,
-        }) Toggles.AutoStart:OnChanged(function(Bool)
-            if Bool and not Locals.IsAllowedPlace(12886143095, 18583778121) then
-                game:GetService("ReplicatedStorage").Remotes.PlayerReady:FireServer()
-            end
-        end)
     --#endregion
 
     --#region Auto Challenge
