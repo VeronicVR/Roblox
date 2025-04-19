@@ -2663,16 +2663,17 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     Vector3.new( d, 0,  d),
                 }
             else
-                local offsets = getPatternOffsets(4, spacing)
-                for i = 1, count - 4 do
-                    local base = offsets[((i-1)%4)+1]
-                    local dir  = Vector3.new(
-                        ((i%2==0) and 1 or -1) * spacing,
-                        0,
-                        ((i%2==1) and 1 or -1) * spacing
-                    )
-                    table.insert(offsets, base + dir)
+                local radius = spacing * math.ceil(count / 4)
+                local offsets = {}
+            
+                for i = 1, count do
+                    -- evenly space around 360°
+                    local angle = (2 * math.pi) * (i - 1) / count
+                    local x = math.cos(angle) * radius
+                    local z = math.sin(angle) * radius
+                    table.insert(offsets, Vector3.new(x, 0, z))
                 end
+            
                 return offsets
             end
         end
