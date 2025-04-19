@@ -72,6 +72,4 @@ if not getgenv().AkoraHubExecuted then
     else
         warn("Failed To Fetch Game Script Index From:", Url)
     end
-else
-    warn("AkoraHub Already Executed. Please Restart The Game To Reload.") 
 end
