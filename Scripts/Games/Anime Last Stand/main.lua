@@ -1204,6 +1204,27 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         		--print("Akora Hub | MyToggle changed to:", Value)
         	end,
         })
+        MiscFunc_GroupBox:AddToggle("Mute_SFX", {
+            Text = "Mute Cash SFX",
+            Tooltip = "Will mute any upgrade or placement sound effects.",
+            DisabledTooltip = "I am disabled!",
+        
+            Default = false,
+            Disabled = false,
+            Visible = true,
+            Risky = false,
+        
+            Callback = function(Value)
+
+            end,
+        }) Toggles.Mute_SFX:OnChanged(function(Bool)
+            if Bool and not Locals.IsAllowedPlace(12886143095, 18583778121) then
+                Locals.Client.PlayerGui.CashSFX.Volume = 0
+            else
+                Locals.Client.PlayerGui.CashSFX.Volume = 0.5
+            end
+        end) 
+
         MiscFunc_GroupBox:AddToggle("PlaceAnywhere", {
         	Text = "Place Anywhere",
         	Tooltip = "Will allow you to place units anywhere.",
@@ -1217,9 +1238,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         	Callback = function(Value)
         		--print("Akora Hub | MyToggle changed to:", Value)
         	end,
-        })
-
-        Toggles.AutoStart:OnChanged(function(Bool)
+        }) Toggles.AutoStart:OnChanged(function(Bool)
             if Bool and not Locals.IsAllowedPlace(12886143095, 18583778121) then
                 game:GetService("ReplicatedStorage").Remotes.PlayerReady:FireServer()
             end
