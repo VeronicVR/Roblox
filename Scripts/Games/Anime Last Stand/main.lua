@@ -1238,10 +1238,12 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
 
             end,
         }) Toggles.Mute_SFX:OnChanged(function(Bool)
-            if Bool and not Locals.IsAllowedPlace(12886143095, 18583778121) then
-                Locals.Client.PlayerGui.CashSFX.Volume = 0
-            else
-                Locals.Client.PlayerGui.CashSFX.Volume = 0.5
+            if not Locals.IsAllowedPlace(12886143095, 18583778121) then
+                if Bool then 
+                    Locals.Client.PlayerGui.CashSFX.Volume = 
+                else
+                    Locals.Client.PlayerGui.CashSFX.Volume = 0.5
+                end
             end
         end) 
     --#endregion
