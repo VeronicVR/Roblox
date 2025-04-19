@@ -1220,7 +1220,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         })
 
         Toggles.AutoStart:OnChanged(function(Bool)
-            if Bool then
+            if Bool and not Locals.IsAllowedPlace(12886143095, 18583778121) then
                 game:GetService("ReplicatedStorage").Remotes.PlayerReady:FireServer()
             end
         end)
