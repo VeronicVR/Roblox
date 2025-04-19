@@ -1,23 +1,18 @@
-repeat task.wait() until game:IsLoaded()
-repeat task.wait() until game.Players.LocalPlayer
-                       and game.Players.LocalPlayer.Character
-                       and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
 
-local queue_on_teleport = (syn and syn.queue_on_teleport)
-                         or (fluxus and fluxus.queue_on_teleport)
-                         or queue_on_teleport
+local queue_on_teleport = (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or queue_on_teleport
 
 if not getgenv().AkoraHubExecuted then
     getgenv().AkoraHubExecuted = true
 
+    print([[===================================================]])
     print([[     _    _                      _   _       _     ]])
     print([[    / \  | | _____  _ __ __ _   | | | |_   _| |__  ]])
     print([[   / _ \ | |/ / _ \| '__/ _` |  | |_| | | | | '_ \ ]])
     print([[  / ___ \|   < (_) | | | (_| |  |  _  | |_| | |_) |]])
     print([[ /_/   \_\_|\_\___/|_|  \__,_|  |_| |_|\__,_|_.__/ ]])
     print([[                                                   ]])
-    print("Welcome, " .. game.Players.LocalPlayer.DisplayName
-          .. " [ @" .. game.Players.LocalPlayer.Name .. " ]")
+    print("Welcome, " .. game.Players.LocalPlayer.DisplayName .. " [ @" .. game.Players.LocalPlayer.Name .. " ]")
 
     if queue_on_teleport then
         queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/VeronicVR/Roblox/refs/heads/main/Scripts/Loader.lua'))()")
@@ -92,7 +87,6 @@ if not getgenv().AkoraHubExecuted then
             ScriptUrl = ge.default
         end
     end
-
     if not ScriptUrl or ScriptUrl == "" then
         warn("No Supported Script For PlaceId:", PlaceId,
              "Creator:", CreatorName or "Unknown")
@@ -100,27 +94,38 @@ if not getgenv().AkoraHubExecuted then
     end
 
     do
-        local owner, repo, filePath = ScriptUrl:match(
+        local owner, repo, path = ScriptUrl:match(
             "^https://raw%.githubusercontent%.com/([^/]+)/([^/]+)/refs/heads/[^/]+/(.+)$"
         )
-        if owner and repo and filePath then
-            local suc, commits = pcall(getCommitCount, owner, repo, filePath)
+        if not owner then
+            owner, repo, path = ScriptUrl:match(
+                "^https://github%.com/([^/]+)/([^/]+)/blob/[^/]+/(.+)$"
+            )
+        end
+
+        if owner and repo and path then
+            local suc, commits = pcall(getCommitCount, owner, repo, path)
             if suc then
                 local X = math.floor(commits/1000) + 1
                 local rem = commits % 1000
                 local Y = math.floor(rem/10)
                 local Z = rem % 10
                 getgenv().Version = string.format("Version %d.%d.%d", X, Y, Z)
-                print("↪ Loading "..getgenv().Version)
+
+                local rawPath = path:gsub("%%20"," ")
+                local gameName = rawPath:match("Scripts/Maps?/.+Games/([^/]+)/main%.lua") or rawPath:match("Scripts/Games/([^/]+)/main%.lua") or "Unknown"
+                print(("↪ Loading %s  —  %s"):format(getgenv().Version, gameName))
             else
-                --warn("Could not retrieve version number", commits)
+                warn("Could not retrieve Version: ", commits)
             end
         else
-            warn("ScriptUrl not in expected raw.githubusercontent format:", ScriptUrl)
+            warn("ScriptUrl not in expected format:", ScriptUrl)
         end
     end
-
+    
     print("If you encounter any errors below this line, please report them to our Discord server.")
+    print([[===================================================]])
+
     local ok2, ScriptResponse = pcall(function()
         return game:HttpGet(ScriptUrl .. "?t=" .. tostring(tick()))
     end)
@@ -130,7 +135,6 @@ if not getgenv().AkoraHubExecuted then
     end
 
     local loadOk, err = pcall(function()
-    
         loadstring(ScriptResponse)()
     end)
     if not loadOk then
