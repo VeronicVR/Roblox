@@ -916,7 +916,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
     Library.ToggleKeybind = Options.MenuKeybind
 
     local Credits = Tabs["UI Settings"]:AddRightGroupbox("Credits")
-    Credits:AddLabel("Scripter & Creator: Ako")
+    Credits:AddLabel("Script Info")
     Credits:AddButton("Scripter & Creator: Ako", function()
         --setclipboard("")
     end)
@@ -928,6 +928,9 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
             Time        = 5,
             SoundId     = 18403881159,
         })
+    end)
+    Credits:AddDivider()
+    Credits:AddButton("Script ".. getgenv().Version, function()
     end)
 
     
