@@ -2663,17 +2663,19 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                     Vector3.new( d, 0,  d),
                 }
             else
-                local radius = spacing * math.ceil(count / 4)
+                -- SCALE FACTOR
+                local ringScale = 1.0
+
+                -- radius grows in “rings” as you add more units (one ring per 4 units)
+                local radius = spacing * ringScale * math.ceil(count / 4)
+
                 local offsets = {}
-            
                 for i = 1, count do
-                    -- evenly space around 360°
                     local angle = (2 * math.pi) * (i - 1) / count
-                    local x = math.cos(angle) * radius
-                    local z = math.sin(angle) * radius
+                    local x     = math.cos(angle) * radius
+                    local z     = math.sin(angle) * radius
                     table.insert(offsets, Vector3.new(x, 0, z))
                 end
-            
                 return offsets
             end
         end
