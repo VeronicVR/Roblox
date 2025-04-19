@@ -1204,6 +1204,8 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
         		--print("Akora Hub | MyToggle changed to:", Value)
         	end,
         })
+        MiscFunc_GroupBox:AddDivider()
+        MiscFunc_GroupBox:AddLabel("QoL")
         MiscFunc_GroupBox:AddToggle("PlaceAnywhere", {
         	Text = "Place Anywhere",
         	Tooltip = "[RISKY] Will allow you to place units anywhere.",
@@ -1222,8 +1224,6 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 game:GetService("ReplicatedStorage").Remotes.PlayerReady:FireServer()
             end
         end)
-        MiscFunc_GroupBox:AddDivider()
-        MiscFunc_GroupBox:AddLabel("QoL")
         MiscFunc_GroupBox:AddToggle("Mute_SFX", {
             Text = "Mute Cash SFX",
             Tooltip = "Will mute any upgrade or placement sound effects.",
