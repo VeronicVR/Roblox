@@ -23,6 +23,21 @@ local ClonedRunService = cloneref(game:GetService("RunService"))
 local ClonedCoreGui = cloneref(game:GetService("CoreGui"))
 local ClonedHttpService = cloneref(game:GetService("HttpService"))
 
+local Cash_Loc, Player_Cash 
+local PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
+local TowerInfo = require(game:GetService("ReplicatedStorage").Modules.TowerInfo)
+local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames)
+
+spawn(function()
+    while true do wait(0.2)
+        PlayerData =  game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
+    end
+end)
+
+repeat
+    wait()
+until PlayerData and PlayerData.Slots and PlayerData.PortalData and PlayerData.Quests
+
 local Locals = {
     -- Services
     Workspace = game:GetService("Workspace"),
@@ -67,6 +82,8 @@ local Locals = {
         int = int:gsub("^,", "")
         return sign..int..frac
     end,
+
+    -- Game Specific
     isPlacedAt = function(pos, name)
         local tol = 2
         for _, inst in ipairs(game.Workspace.Towers:GetChildren()) do
@@ -112,14 +129,23 @@ local Locals = {
             warn("No TextButton found at index " .. buttonIndex .. " in the given directory!")
         end
     end,
-    -- Game Specific
+    isUnitEquipped = function(targetName)
+        for _, slotInfo in pairs(PlayerData.Slots or {}) do
+            if slotInfo.Value == targetName then
+                return true
+            end
+        end
+        return false
+    end,
 }
+
 local Directory = "Akora Hub/Games/" .. GameName .. "/" .. Locals.Client.DisplayName .. " [ @" .. Locals.Client.Name .. " - " .. Locals.Client.UserId .. " ]"
 local cubeContainer
 globalPlacements = {}
 
 if not Locals.IsAllowedPlace(12886143095, 18583778121) then
     getgenv().SmartAutoplay.SelectedPathFolder = game.workspace.Map:WaitForChild("Waypoints")
+--[[
     repeat wait() until Locals.PlayerGui:FindFirstChild("Bottom")
                       and Locals.PlayerGui.Bottom:FindFirstChild("Frame")
                       and Locals.PlayerGui.Bottom.Frame.Visible
@@ -127,30 +153,7 @@ else
     repeat wait() until Locals.PlayerGui:FindFirstChild("BottomHUD")
                       and Locals.PlayerGui.BottomHUD:FindFirstChild("Frame")
                       and Locals.PlayerGui.BottomHUD.Frame.Visible
-end
-
-local Cash_Loc, Player_Cash 
-local PlayerData = game:GetService("ReplicatedStorage").Remotes.GetPlayerData:InvokeServer()
-local TowerInfo = require(game:GetService("ReplicatedStorage").Modules.TowerInfo)
-local UnitNames = require(game:GetService("ReplicatedStorage").Modules.UnitNames)
-
-spawn(function()
-    while true do wait(0.2)
-        PlayerData = Locals.ReplicatedStorage.Remotes.GetPlayerData:InvokeServer()
-    end
-end)
-
-repeat
-    wait()
-until PlayerData and PlayerData.Slots
-
-Locals.isUnitEquipped = function(targetName)
-    for _, slotInfo in pairs(PlayerData.Slots or {}) do
-        if slotInfo.Value == targetName then
-            return true
-        end
-    end
-    return false
+--]]
 end
 
 local challengeOptions = {"Barebones", "Tower Limit", "Flight", "No Hit", "Speedy", "High Cost", "Short Range", "Immunity"}
