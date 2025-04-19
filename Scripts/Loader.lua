@@ -8,6 +8,7 @@ print([[  / ___ \|   < (_) | | | (_| |  |  _  | |_| | |_) |]])
 print([[ /_/   \_\_|\_\___/|_|  \__,_|  |_| |_|\__,_|_.__/ ]])
 print([[                                                   ]])
 print("Welcome, " .. game.Players.LocalPlayer.DisplayName .. " [ @" .. game.Players.LocalPlayer.Name .. " ]")
+print("If you encounter any errors below this line, please report them to our Discord server.")
 
 local queue_on_teleport = (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or queue_on_teleport
 if not getgenv().AkoraHubExecuted then
