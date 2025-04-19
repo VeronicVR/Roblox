@@ -2604,7 +2604,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 local d = spacing/2
                 return { Vector3.new(-d,0,0), Vector3.new(d,0,0) }
             elseif count == 3 then
-                local m = 0.75
+                local m = 0.65
                 local d = spacing * m
                 local h = math.sqrt(3) / 2 * d
                 return {
