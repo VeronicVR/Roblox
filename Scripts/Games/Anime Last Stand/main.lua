@@ -2667,7 +2667,7 @@ local selectedPun = puppyPuns[math.random(1, #puppyPuns)]
                 }
             else
                 -- SCALE FACTOR
-                local ringScale = 1.0
+                local ringScale = 0.7
 
                 -- radius grows in “rings” as you add more units (one ring per 4 units)
                 local radius = spacing * ringScale * math.ceil(count / 4)
